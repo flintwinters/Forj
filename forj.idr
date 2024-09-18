@@ -2,8 +2,29 @@
 
 import Data.Vect
 import Data.Fin
-data Ty = TyInt | TyBool | TyFun Ty Ty
 
+namespace Forj
+    record T a where
+        constructor MkT
+        name : String
+        size : Integer
+        t : Type
+        f : t -> a
+
+    data Stack: Nat -> Type -> Type where
+        Base  : Stack Z a
+        (::)  : a -> Stack k a -> Stack (S k) a
+
+    Peek : Stack (S n) t -> t
+    Peek (s::_) = s
+    
+    Pull : Stack (S n) t -> Stack n t
+    Pull (_::ss) = ss
+
+    Push : t -> Stack n t -> Stack (S n) t
+    Push s ss = (s::ss)
+
+data Ty = TyInt | TyBool | TyFun Ty Ty
 interpTy : Ty -> Type
 interpTy TyInt       = Integer
 interpTy TyBool      = Bool
