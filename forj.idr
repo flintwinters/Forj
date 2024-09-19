@@ -24,6 +24,15 @@ namespace Forj
     Push : t -> Stack n t -> Stack (S n) t
     Push s ss = (s::ss)
 
+    -- Can we type Scope so that only successors can be appended?
+    Tag = Nat
+    data Scope = Root | Branch Tag (String -> Scope {-Replace with Dict type-}) Scope
+
+    Global = Root
+    basic: String -> Scope
+    basic s = Global
+    Br = Branch (0) (basic) Global
+
 data Ty = TyInt | TyBool | TyFun Ty Ty
 interpTy : Ty -> Type
 interpTy TyInt       = Integer
