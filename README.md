@@ -7,13 +7,16 @@ The Forj systems programming language is a simple compiled stack language.
 #### Nested scopes.
 `Country:City:Street:House:Room`
 
+##### Partially ordered scopes
+`Country :< Room`
+
 #### Explicit function application operator "bang"
 
 `func !`
 
 Everything is a value until `!` is used on it.
 
-Words, `!!`, `!!!`, etc, represent functions that return their successor.
+The words, `!!`, `!!!`, etc, represent functions that return their successor.
 
 `3 fact !! !` (6)
 
