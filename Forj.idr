@@ -4,6 +4,7 @@
 import Data.Vect
 import Data.Fin
 
+-- TODO: Change to module
 namespace Forj
     record T a where
         constructor MkT
@@ -29,7 +30,8 @@ namespace Forj
     -- Can we type Scope so that only successors can be appended?
     Tag = String -- Placeholder
     mutual
-        data ScMap = Vect n (List (String, Scope))
+        ScMap: (Nat -> Type)
+        ScMap n = Vect n (List (String, Scope))
         data Scope = Root | Branch Tag ScMap
 
     -- https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html#maybe
@@ -43,18 +45,18 @@ namespace Forj
     Fetch : Scope -> Tag -> Maybe Scope
     -- Fetch Root _ = Nothing
     -- Fetch Branch a b s = if ()
-    (:<) : Scope -> Scope -> Maybe Bool
-    infixl 10 :<
-    Root :< Root = Just False
-    Root :< _    = Just True
-    _    :< Root = Just False
-    (Branch a b) :< (Branch c d) =
-        if (a == c) then Just False else
-        case (Fetch (Branch a b) c) of
-            Nothing => case (Fetch (Branch c d) a) of
-                Nothing => Nothing
-                _ => Just False
-            _  => Just True
+    -- (:<) : Scope -> Scope -> Maybe Bool
+    -- infixl 10 :<
+    -- Root :< Root = Just False
+    -- Root :< _    = Just True
+    -- _    :< Root = Just False
+    -- (Branch a b) :< (Branch c d) =
+    --     if (a == c) then Just False else
+    --     case (Fetch (Branch a b) c) of
+    --         Nothing => case (Fetch (Branch c d) a) of
+    --             Nothing => Nothing
+    --             _ => Just False
+    --         _  => Just True
 
     
 
