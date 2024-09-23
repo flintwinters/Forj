@@ -1,8 +1,8 @@
 all:
-	idris2 -q forj.idr
+	idris2 -q Main.idr
 
 exec:
-	idris2 -q forj.idr --exec main
+	idris2 -q Main.idr --exec main
 
 push:
 	git add -A
