@@ -1,8 +1,8 @@
 all:
-	idris2 -q Main.idr
+	rlwrap idris2 -q Main.idr
 
 exec:
-	idris2 -q Main.idr --exec main
+	rlwrap idris2 -q Main.idr --exec main
 
 push:
 	git add -A
