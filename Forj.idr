@@ -16,6 +16,11 @@ data Stack: Nat -> Type -> Type where
     Base  : Stack Z a
     (::)  : a -> Stack k a -> Stack (S k) a
 
+-- Can we type Scope so that only successors can be appended?
+data Node : Type where
+    Root  : Node
+    (:+)  : String -> List Node -> Node
+
 Peek : Stack (S n) t -> t
 Peek (s::_) = s
 
@@ -25,11 +30,3 @@ Pull (_::ss) = ss
 Push : t -> Stack n t -> Stack (S n) t
 Push s ss = (s::ss)
 
--- Can we type Scope so that only successors can be appended?
-Tag = Nat
-data Scope = Root | Branch Tag (String -> Scope {-Replace with Dict type-}) Scope
-
-Global = Root
-basic: String -> Scope
-basic s = Global
-Br = Branch (0) (basic) Global
