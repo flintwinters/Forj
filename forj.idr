@@ -28,35 +28,29 @@ namespace Forj
     -- https://idris2.readthedocs.io/en/latest/tutorial/interfaces.html#extending-interfaces
     -- Can we type Scope so that only successors can be appended?
     Tag = String -- Placeholder
+    mapsize: Nat; mapsize = 10
     mutual
-        data ScMap = Vect n (List (String, Scope))
         data Scope = Root | Branch Tag ScMap
+        ScMap: Type
+        ScMap = Vect mapsize (List (String, Scope))
 
     -- https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html#maybe
     SearchLst : String -> List (String, Scope) -> Maybe Scope
     SearchLst _ Nil       = Nothing
     SearchLst str1 ((str2, s) :: xs) =
         if (str1 == str2) then Just s else SearchLst str1 xs
-    Hash : String -> (1 n: Nat) -> Fin n
+    Hash : String -> Fin mapsize
+    Hash s = let hash: Nat -> Char -> Nat
+                 hash a b = a + (cast b)
+              in natToFin (mod (foldl hash 0 s) 10)
     GetMap : String -> ScMap -> Maybe Scope
-    -- GetMap s m = SearchLst s (index (Hash s ?hol) m)
-    Fetch : Scope -> Tag -> Maybe Scope
-    -- Fetch Root _ = Nothing
-    -- Fetch Branch a b s = if ()
-    (:<) : Scope -> Scope -> Maybe Bool
+    GetMap s m = SearchLst s (index (Hash s) m)
+    (:<) : Scope -> Tag -> Maybe Scope
     infixl 10 :<
-    Root :< Root = Just False
-    Root :< _    = Just True
-    _    :< Root = Just False
-    (Branch a b) :< (Branch c d) =
-        if (a == c) then Just False else
-        case (Fetch (Branch a b) c) of
-            Nothing => case (Fetch (Branch c d) a) of
-                Nothing => Nothing
-                _ => Just False
-            _  => Just True
-
-    
+    Root :< _ = Nothing
+    (Branch a b) :< s = case (GetMap s b) of
+        Nothing => Nothing
+        Just s  => Just s
 
 data Ty = TyInt | TyBool | TyFun Ty Ty
 interpTy : Ty -> Type
