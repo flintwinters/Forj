@@ -19,8 +19,10 @@ Nil <? _   = False
 (c::cs) <? (p::ps) = (c == p) && (cs <? ps)
 
 public export
-data Node : Path -> Type where
+data Node : (P: Path) -> Type where
     Root  : String -> Node Nil
+    -- needs to be changed to List (Node ps), along with an assertion that
+    -- P <? ps will be true
     Branch: String -> Node ps -> List (Node ps) -> Node (p::ps)
 
 public export
