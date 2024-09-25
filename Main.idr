@@ -53,9 +53,18 @@ fact = Lam (If (Op (==) (Var Stop) (Val 0))
             (Val 1)
             (Op (*) (App fact (Op (-) (Var Stop) (Val 1)))
                     (Var Stop)))
+
+R: Node []
+R  = Root "r"
+L: Node [0]
+L  = Branch "l" R [R]
+LL: Node [1, 0]
+LL  = Branch "x" L [L]
+LLL: Node [2, 1, 0]
+LLL  = Branch "d" LL [LL]
+
 main : IO ()
 main = do 
-        putStr "Enter a number: "
-        x <- getLine
-        printLn (interp [] fact (cast x))
-
+        printLn L
+        printLn LL
+        printLn LLL

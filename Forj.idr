@@ -5,21 +5,28 @@ module Forj
 import Data.Vect
 import Data.Fin
 
-record T a where
-    constructor MkT
-    name : String
-    size : Integer
-    t : Type
-    f : t -> a
-
+public export 
 data Stack: Nat -> Type -> Type where
     Base  : Stack Z a
     (::)  : a -> Stack k a -> Stack (S k) a
 
--- Can we type Scope so that only successors can be appended?
-data Node : Type where
-    Root  : Node
-    (:+)  : String -> List Node -> Node
+Path = List Nat
+(<?): Path -> Path -> Bool
+infixr 10 <?
+Nil <? Nil = True
+_   <? Nil = True
+Nil <? _   = False
+(c::cs) <? (p::ps) = (c == p) && (cs <? ps)
+
+public export
+data Node : Path -> Type where
+    Root  : String -> Node Nil
+    Branch: String -> Node ps -> List (Node ps) -> Node (p::ps)
+
+public export
+Show (Node p) where
+    show (Root s) = s
+    show (Branch s a b) = s ++ " - " ++ show b
 
 Peek : Stack (S n) t -> t
 Peek (s::_) = s
@@ -29,4 +36,3 @@ Pull (_::ss) = ss
 
 Push : t -> Stack n t -> Stack (S n) t
 Push s ss = (s::ss)
-
