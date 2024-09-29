@@ -54,17 +54,11 @@ fact = Lam (If (Op (==) (Var Stop) (Val 0))
             (Op (*) (App fact (Op (-) (Var Stop) (Val 1)))
                     (Var Stop)))
 
-R: Node []
-R  = Root "r"
-L: Node [0]
-L  = Branch "l" R [R]
-LL: Node [1, 0]
-LL  = Branch "x" L [L]
-LLL: Node [2, 1, 0]
-LLL  = Branch "d" LL [LL]
+-- data SortedMap : Type -> Type -> Type where
+--   Empty : Ord k => SortedMap k v
+--   M : (o : Ord k) => (n:Nat) -> Tree n k v o -> SortedMap k v
+t: Tree
 
 main : IO ()
 main = do 
-        printLn L
-        printLn LL
-        printLn LLL
+        printLn "Hi"
