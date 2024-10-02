@@ -16,8 +16,8 @@ obj:
 	riscv64-unknown-elf-objdump outmain
 
 push:
-	git add -A
-	git commit -m "$(msg)"
+	git add -A && \
+	git commit -m "$(msg)" && \
 	git push -u origin
 
 clean:
