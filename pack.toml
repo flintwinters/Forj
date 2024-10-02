@@ -1,10 +1,10 @@
-[custom.all.Forj]
+[custom.all.forj]
 type = "local"
 path = "."
-ipkg = "Forj.ipkg"
+ipkg = "forj.ipkg"
 test = "test/test.ipkg"
 
-[custom.all.Forj-test]
+[custom.all.forj-test]
 type = "local"
 path = "test"
 ipkg = "test.ipkg"

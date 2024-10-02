@@ -1,1 +1,0 @@
-(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program "/home/orange/forj/qidris/build/exec/Forj_app/Forj.ss"))

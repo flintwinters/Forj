@@ -8,8 +8,8 @@ if [ "$(uname)" = Darwin ]; then
 else
   DIR=$(dirname "$(readlink -f -- "$0")")
 fi
-export LD_LIBRARY_PATH="$DIR/Forj_app:$LD_LIBRARY_PATH"
-export DYLD_LIBRARY_PATH="$DIR/Forj_app:$DYLD_LIBRARY_PATH"
-export IDRIS2_INC_SRC="$DIR/Forj_app"
+export LD_LIBRARY_PATH="$DIR/forj-test_app:$LD_LIBRARY_PATH"
+export DYLD_LIBRARY_PATH="$DIR/forj-test_app:$DYLD_LIBRARY_PATH"
+export IDRIS2_INC_SRC="$DIR/forj-test_app"
 
-"$DIR/Forj_app/Forj.so" "$@"
+"$DIR/forj-test_app/forj-test.so" "$@"

@@ -1,5 +1,5 @@
 all:
-	rlwrap idris2 -q Main.idr -p contrib
+	pack repl -q src/Main.idr
 
 exec:
 	rlwrap idris2 -q Main.idr --exec main

@@ -3,7 +3,6 @@
 module Main
 import Data.Vect
 import Data.Fin
-import Text
 import Forj
 
 -- https://idris2.readthedocs.io/en/latest/tutorial/interp.html

@@ -1,4 +1,4 @@
-package Forj
+package forj
 version = 0.1.0
 authors = "flintwinters"
 -- maintainers =
@@ -16,13 +16,13 @@ authors = "flintwinters"
 -- depends =
 
 -- modules to install
--- modules =
+modules = Forj
 
 -- main file (i.e. file to load at REPL)
-main = Main
+-- main =
 
 -- name of executable
-executable = "Forj"
+-- executable =
 -- opts =
 sourcedir = "src"
 -- builddir =

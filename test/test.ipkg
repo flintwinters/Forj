@@ -1,4 +1,4 @@
-package Forj-test
+package forj-test
 version = 0.1.0
 authors = "flintwinters"
 -- maintainers =
@@ -13,7 +13,7 @@ authors = "flintwinters"
 -- langversion
 
 -- packages to add to search path
-depends = Forj
+depends = forj
 
 -- modules to install
 -- modules =
@@ -22,7 +22,7 @@ depends = Forj
 main = Main
 
 -- name of executable
-executable = "Forj-test"
+executable = "forj-test"
 -- opts =
 sourcedir = "src"
 -- builddir =
