@@ -1,5 +1,5 @@
 all:
-	pack --extra-args "-q" repl src/Main.idr
+	rlwrap pack --extra-args "-q" repl src/Main.idr
 
 exec:
 	rlwrap idris2 -q Main.idr --exec main
