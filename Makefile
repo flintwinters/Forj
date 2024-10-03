@@ -1,8 +1,8 @@
 all:
-	rlwrap idris2 -q Main.idr -p contrib
+	rlwrap idris2 -q src/Main.idr -p contrib
 
 exec:
-	rlwrap idris2 -q Main.idr --exec main
+	rlwrap idris2 -q src/Main.idr --exec main
 
 rv:
 	cd rv64 && \
