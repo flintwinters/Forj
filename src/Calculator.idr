@@ -1,4 +1,3 @@
--- https://github.com/idris-lang/Idris2/blob/main/docs/source/cookbook/parsing.rst
 import Data.List1
 import Text.Lexer
 import Text.Parser
@@ -8,33 +7,39 @@ import Text.Parser.Expression
 
 data CalculatorTokenKind
   = CTNum
+  | CTStr
   | CTPlus
   | CTMinus
   | CTMultiply
   | CTDivide
   | CTOParen
   | CTCParen
+  | CTIn
   | CTIgnore
 
 Eq CalculatorTokenKind where
   (==) CTNum CTNum = True
+  (==) CTStr CTStr = True
   (==) CTPlus CTPlus = True
   (==) CTMinus CTMinus = True
   (==) CTMultiply CTMultiply = True
   (==) CTDivide CTDivide = True
   (==) CTOParen CTOParen = True
   (==) CTCParen CTCParen = True
+  (==) CTIn CTIn = True
   (==) _ _ = False
 
 Show CalculatorTokenKind where
-  show CTNum = "CTNum"
-  show CTPlus = "CTPlus"
-  show CTMinus = "CTMinus"
-  show CTMultiply = "CTMultiply"
-  show CTDivide = "CTDivide"
-  show CTOParen = "CTOParen"
-  show CTCParen = "CTCParen"
-  show CTIgnore = "CTIgnore"
+  show CTNum = "C#"
+  show CTStr = "C\""
+  show CTPlus = "C+"
+  show CTMinus = "C-"
+  show CTMultiply = "C*"
+  show CTDivide = "C/"
+  show CTOParen = "C("
+  show CTCParen = "C)"
+  show CTIn = "C:"
+  show CTIgnore = "C\\s"
 
 CalculatorToken : Type
 CalculatorToken = Token CalculatorTokenKind
@@ -44,36 +49,51 @@ Show CalculatorToken where
 
 TokenKind CalculatorTokenKind where
   TokType CTNum = Double
+  TokType CTStr = Double
   TokType _ = ()
 
   tokValue CTNum s = cast s
+  tokValue CTStr s = cast s
   tokValue CTPlus _ = ()
   tokValue CTMinus _ = ()
   tokValue CTMultiply _ = ()
   tokValue CTDivide _ = ()
   tokValue CTOParen _ = ()
   tokValue CTCParen _ = ()
+  tokValue CTIn _ = ()
   tokValue CTIgnore _ = ()
 
 ignored : WithBounds CalculatorToken -> Bool
 ignored (MkBounded (Tok CTIgnore _) _ _) = True
 ignored _ = False
 
-number : Lexer
-number = digits
+-- someUntil : (stopBefore : Recognise c) -> (l : Lexer) -> Lexer
+-- someUntil stopBefore l = some (reject stopBefore <+> l)
+
+someThen : (stopAfter : Recognise c) -> (l : Lexer) -> Lexer
+someThen stopAfter l = someUntil stopAfter l <+> stopAfter
+
+bookend : (q: Lexer) -> (l : Lexer) -> Lexer
+bookend q l = q <+> someUntil q l
 
 calculatorTokenMap : TokenMap CalculatorToken
 calculatorTokenMap = toTokenMap [
   (spaces, CTIgnore),
-  (digits, CTNum),
+  (alphas, CTNum),
+  (digits, CTStr),
+  (exact ":::", CTIn),
+  -- (bookend (non spaces) (exact ":"), CTIn),
   (exact "+", CTPlus),
   (exact "-", CTMinus),
   (exact "*", CTMultiply),
   (exact "/", CTDivide)
 ]
 
+(:::): TokType CTNum -> TokType CTNum -> TokType CTNum
+(:::) a b = b
+
 lexCalculator : String -> Maybe (List (WithBounds CalculatorToken))
-lexCalculator str =
+lexCalculator str = 
   case lex calculatorTokenMap str of
     (tokens, _, _, "") => Just tokens
     _ => Nothing
@@ -91,6 +111,7 @@ mutual
     ],
     [ Infix ((+) <$ match CTPlus) AssocLeft
     , Infix ((-) <$ match CTMinus) AssocLeft
+    , Infix ((:::) <$ match CTIn) AssocLeft
     ]
   ] term
 
@@ -108,3 +129,8 @@ parse1 x =
     Nothing => Left "Failed to lex."
 
 main : IO ()
+main = do
+        printLn $ parse1 "1"
+        printLn $ parse1 "4:::5"
+        printLn $ parse1 "ok"
+        printLn $ parse1 ""
