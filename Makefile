@@ -4,7 +4,9 @@ all:
 exec:
 	rlwrap pack --extra-args "-q" exec src/Main.idr
 
+# https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
+# step by step walkthrough on loading riscv qemu
 rv:
 	cd rv64 && \
 	riscv64-unknown-elf-gcc -static -nostdlib -g -ggdb -O0 -ffreestanding -Wall -Wextra -Werror -c main.c -o outmain.o && \
@@ -24,7 +26,6 @@ rv:
 		-s -S \
 		-machine virt \
 		-cpu rv64 \
-		-m 128M \
 		-nographic \
 		-serial mon:stdio \
 		-bios none \
