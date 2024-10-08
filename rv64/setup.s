@@ -44,15 +44,17 @@ _start:
     mret
 
 mtrap:
+	# unset timer flag
+	li      t0, 0x80
+    csrc    mip, t0
+	
+	# add 30k to mtimecmp
 	li      t1, 0x2004000
 	ld      t0, 0(t1)
 	li		t2, 30000
 	add 	t0, t0, t2
 	sd		t0, 0(t1)
 
-	li      t0, 0x80
-    csrc    mip, t0
-	
     mret
 
 # kernel
