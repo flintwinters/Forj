@@ -13,7 +13,7 @@ authors = "flintwinters"
 -- langversion
 
 -- packages to add to search path
--- depends =
+depends = parser,contrib
 
 -- modules to install
 modules = Forj

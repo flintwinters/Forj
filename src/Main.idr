@@ -2,6 +2,8 @@
 
 module Main
 import Data.Vect
+import Derive.Prelude
+import Text.Parse.Manual
 import Data.Fin
 import Forj
 

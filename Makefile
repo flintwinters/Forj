@@ -2,7 +2,7 @@ all:
 	rlwrap pack --extra-args "-q" repl src/Main.idr
 
 exec:
-	rlwrap idris2 -q Main.idr --exec main
+	rlwrap pack --extra-args "-q" exec src/Main.idr
 
 rv:
 	cd rv64;\

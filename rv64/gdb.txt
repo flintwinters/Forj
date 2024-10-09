@@ -1,0 +1,5 @@
+$1 = (void (*)()) 0x80000000 <_start>
+Warning: 'set logging off', an alias for the command 'set logging enabled', is deprecated.
+Use 'set logging enabled off'.
+
+$1 = (void (*)()) 0x80000000 <_start>
