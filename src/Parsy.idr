@@ -9,83 +9,57 @@ import Text.Parse.Manual
 %default total
 %language ElabReflection
 
-public export
-data Expr : Type where
-  Lit  : Nat -> Expr
-  Add  : Expr -> Expr -> Expr
-  Mult : Expr -> Expr -> Expr
-
-%runElab derive "Expr" [Show,Eq]
-
-public export %inline
-Num Expr where
-  fromInteger = Lit . fromInteger
-  (+) = Add
-  (*) = Mult
-
-public export
-eval : Expr -> Nat
-eval (Lit k)    = k
-eval (Add x y)  = eval x + eval y
-eval (Mult x y) = eval x * eval y
-
-test1 : eval (7 + 3 * 12) === 43
-test1 = Refl
-
-
-||| `A`ddition and `M`ultiplication
-public export
 data Op = A | M
 
-%runElab derive "Op" [Show,Eq]
+record Variable where
+  constructor V
+  name: String
+  val : Nat
 
-public export
+%runElab derive "Op" [Show,Eq]
+%runElab derive "Variable" [Show,Eq]
+
 data Token : Type where
   TLit : Nat -> Token
+  TVar : Variable -> Token
   TSym : Char -> Token
   TOp  : Op -> Token
 
 %runElab derive "Token" [Show,Eq]
 
-public export
-FromChar Token where
-  fromChar '+' = TOp A
-  fromChar '*' = TOp M
-  fromChar c   = TSym c
+Interpolation Token where
+  interpolate (TLit n) = show n
+  interpolate (TVar v) = "\{v.name}, \{show v.val}"
+  interpolate (TSym s) = show s
+  interpolate (TOp  s) = show s
 
-public export
 0 Err : Type
 Err = ParseError Token Void
 
-lit :
-     SnocList (Bounded Token)
-  -> (start,cur : Position)
-  -> Nat
-  -> List Char
-  -> Either (Bounded Err) (List $ Bounded Token)
+tok4 : (cs : List Char) -> LexRes True cs e Token
+tok4 ('(' :: xs) = Succ (TSym '(') xs
+tok4 (')' :: xs) = Succ (TSym ')') xs
+tok4 ('*' :: xs) = Succ (TOp M) xs
+tok4 ('+' :: xs) = Succ (TOp A) xs
+tok4 ('b' :: xs) = Succ (TVar $ V "okay" 0) xs
+tok4 xs          = TLit <$> dec xs
 
-tok :
-     SnocList (Bounded Token)
-  -> (cur : Position)
-  -> List Char
-  -> Either (Bounded Err) (List $ Bounded Token)
+toks4 : String -> Either (Bounded Err) (List $ Bounded Token)
+toks4 = (mapFst (map fromVoid)) . (singleLineDropSpaces tok4)
 
-lit st s c n []        = Right $ st <>> [bounded (TLit n) s c]
-lit st s c n (x :: xs) =
-  if isDigit x
-     then lit st s (incCol c) (n*10 + digit x) xs
-     else tok (st :< bounded (TLit n) s c) c (x::xs)
+StrRes : String -> Either (Bounded Err) (List $ Bounded Token) -> String
+StrRes _ (Right ts) = unlines $ (\(B t bs) => "\{t}: \{bs}") <$> ts
+StrRes s (Left b) = uncurry (printParseError s) (virtualFromBounded b)
 
-isSymbol : Char -> Bool
-isSymbol '(' = True
-isSymbol ')' = True
-isSymbol '*' = True
-isSymbol '+' = True
-isSymbol _   = False
+lex : String -> String
+lex s = StrRes s (toks4 $ s)
 
-tok st c (x :: xs) =
-  if      isSymbol x then tok (st :< oneChar (fromChar x) c) (incCol c) xs
-  else if isSpace x then tok st (next x c) xs
-  else if isDigit x then lit st c (incCol c) (digit x) xs
-  else Left (oneChar (Unknown . Left $ show x) c)
-tok st c []        = Right $ st <>> []
+main : IO ()
+main = do
+        putStrLn $ lex "1 + 1"
+        putStrLn $ lex "1+1"
+        putStrLn $ lex "(2 + 2) * 10"
+        putStrLn $ lex "3+1"
+        putStrLn $ lex "(3 + a"
+        putStrLn $ lex "1 + b"
+        putStrLn $ lex "1 + a bc"

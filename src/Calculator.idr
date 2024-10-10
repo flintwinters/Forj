@@ -1,4 +1,5 @@
 import Data.List1
+import Derive.Prelude 
 import Text.Lexer
 import Text.Token
 import Text.Parser
@@ -6,6 +7,7 @@ import Text.Parser.Core
 import Text.Parser.Expression
 
 %default total
+%language ElabReflection
 
 data CalculatorTokenKind
   = CTNum
@@ -17,25 +19,7 @@ data CalculatorTokenKind
   | CTIn
   | CTIgnore
 
-Eq CalculatorTokenKind where
-  (==) CTNum CTNum = True
-  (==) CTStr CTStr = True
-  (==) CTPlus CTPlus = True
-  (==) CTMinus CTMinus = True
-  (==) CTMultiply CTMultiply = True
-  (==) CTDivide CTDivide = True
-  (==) CTIn CTIn = True
-  (==) _ _ = False
-
-Show CalculatorTokenKind where
-  show CTNum = "C#"
-  show CTStr = "C\""
-  show CTPlus = "C+"
-  show CTMinus = "C-"
-  show CTMultiply = "C*"
-  show CTDivide = "C/"
-  show CTIn = "C:"
-  show CTIgnore = "C\\s"
+%runElab derive "CalculatorTokenKind" [Show,Eq]
 
 CalculatorToken : Type
 CalculatorToken = Token CalculatorTokenKind
