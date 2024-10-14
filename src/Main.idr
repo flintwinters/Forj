@@ -12,26 +12,27 @@ import Forj
 
 -- https://idris2.readthedocs.io/en/latest/tutorial/interp.html
 
-data Ty = TyInt | TyBool | TyString | TyFun Ty Ty
+data Ty = TyNat | TyInt | TyBool | TyString | TyFun Ty Ty
+
 InterpTy : Ty -> Type
+Context: (n: Nat) -> Type
+Context n = Vect n Ty
+Scopes = List (String, (t: Ty ** InterpTy t))
+
+InterpTy TyNat       = Nat
 InterpTy TyInt       = Int64
 InterpTy TyBool      = Bool
 InterpTy TyString    = String
-InterpTy (TyFun a t) = InterpTy a -> InterpTy t
+InterpTy (TyFun a b) = InterpTy a -> InterpTy b
 
 %runElab derive "Ty" [Show,Eq]
 
-Context: (n: Nat) -> Type
-Context n = Vect n Ty
-
-Scopes = List (String, (t: Ty ** InterpTy t))
-
 showITy: {t: Ty} -> InterpTy t -> String
+showITy {t = TyNat} x = show x
 showITy {t = TyInt} x = show x
 showITy {t = TyBool} x = show x
 showITy {t = TyString} x = show x
-showITy {t = TyFun a b} x = "TyFun"
-
+showITy {t = TyFun a b} x = "TyFun " ++ show a ++ show b
 
 data HasType : (i : Fin n)
                 -> Scopes
@@ -44,7 +45,7 @@ data HasType : (i : Fin n)
 
 data Expr : Scopes -> Context n -> Ty -> Type where
     Var : HasType i s context t -> Expr s context t
-    Val : (x : Int64) -> Expr s context TyInt
+    Val : (t: Ty) -> (x : InterpTy t) -> Expr s context t
     Str : (str : String) -> Expr s context TyString
     Lam : Expr s (a :: context) t -> Expr s context (TyFun a t)
     App : Expr s context (TyFun a t) -> Expr s context a -> Expr s context t
@@ -70,8 +71,8 @@ namelookup str ((a, (b ** bb)) :: xs) =
     else namelookup str xs
 
 interp : Env context -> Expr s context t -> InterpTy t
-interp env (Var i)     = lookup i env
-interp env (Val x)     = x
+interp env (Var i)   = lookup i env
+interp env (Val t x)   = x
 interp env (Str x)     = x
 interp env (Lam sc)    = \x => interp (x :: env) sc
 interp env (App f s)   = interp env f (interp env s)
@@ -80,15 +81,15 @@ interp env (If x t e)  = if interp env x then interp env t
                                         else interp env e
 add : Expr s context (TyFun TyInt (TyFun TyInt TyInt))
 add = Lam (Lam (Op (+) (Var Stop) (Var (Pop Stop))))
-sub : Expr s context (TyFun TyInt (TyFun TyInt TyInt))
-sub = Lam (Lam (Op (-) (Var Stop) (Var (Pop Stop))))
+sub : Expr s context (TyFun TyNat (TyFun TyNat TyNat))
+sub = Lam (Lam (Op (minus) (Var Stop) (Var (Pop Stop))))
 
 partial
-fact : Expr s context (TyFun TyInt TyInt)
-fact = Lam (If (Op (<=) (Var Stop) (Val 2))
-            (Val 2)
-            (Op (*) (App fact (
-                        App (App sub (Val 1)) (Var Stop)
+fact : Expr s context (TyFun TyNat TyNat)
+fact = Lam (If (Op (<=) (Var Stop) (Val TyNat 2))
+            (Val TyNat 2)
+            (Op (mult) (App fact (
+                        App (App sub (Val TyNat 1)) (Var Stop)
                     ))
                     (Var Stop)))
 
