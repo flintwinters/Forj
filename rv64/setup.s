@@ -114,7 +114,7 @@ interrupts:
 	li		t0, 0x07
 	beq 	t0, t1, timerhandler
 	mret
-	
+
 timerhandler:
 	# unset timer flag
 	li      t0, 0x80
@@ -129,8 +129,21 @@ timerhandler:
 
     mret
 
+# uart
+serial:
+	# interrupts = <0x0a>;
+	# interrupt-parent = <0x03>;
+	# clock-frequency = "\08@";
+	# reg = <0x00 0x10000000 0x00 0x100>;
+	# compatible = "ns16550a";
+
 # kernel
 main:
+	# Uart putchar:
+	# li t0, 1
+	# slli t0, t0, 28
+	# li t1, 0x41
+	# sw t1, 0(t0)
 	j main
 
 .align 12

@@ -54,7 +54,7 @@ obj:
 push:
 	git add -u
 	git commit -m "$(msg)"
-	git push -u origin
+	git push
 
 clean:
 	rm -rf build
