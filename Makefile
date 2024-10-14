@@ -38,15 +38,6 @@ asm:
 	cd rv64 && \
 	riscv64-unknown-elf-gcc -S -static -nostdlib -g -ggdb -O0 -ffreestanding -Wall -Wextra -Werror -c main.c -o asmmain.s
 	
-# asm:
-# 	cd rv64 &&\
-# 	riscv64-unknown-elf-as main.s -g -o outasm.o &&\
-# 	riscv64-unknown-elf-ld outasm.o -o outasm &&\
-# 	(qemu-riscv64 -g 2222 outasm &\
-# 	gdb-multiarch -q -ex "source `pwd`/pyg.py";\
-# 	pkill qemu-riscv64;\
-# 	rm outasm.o)
-
 obj:
 	cd rv64
 	riscv64-unknown-elf-objdump outmain
