@@ -5,7 +5,7 @@ import Data.Vect
 import Derive.Prelude
 import Text.Parse.Manual
 import Data.Fin
-import Forj
+import Asm
 
 %default total
 %language ElabReflection
