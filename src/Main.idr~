@@ -26,11 +26,7 @@ Context n = Vect n Ty
 
 Scopes = List (String, (t: Ty ** InterpTy t))
 
-showITy: {t: Ty} -> InterpTy t -> String
-showITy {t = TyInt} x = show x
-showITy {t = TyBool} x = show x
-showITy {t = TyString} x = show x
-showITy {t = TyFun a b} x = "TyFun"
+show: InterpTy t -> String
 
 
 data HasType : (i : Fin n)
@@ -66,7 +62,7 @@ namelookup : String -> Scopes -> Either String Ty
 namelookup str [] = Left "Error not found"
 namelookup str ((a, (b ** bb)) :: xs) = 
     if a == str
-    then Left (show b ++ showITy bb)
+    then Left (show b)
     else namelookup str xs
 
 interp : Env context -> Expr s context t -> InterpTy t
