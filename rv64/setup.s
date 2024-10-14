@@ -38,7 +38,7 @@ _start:
     csrw    mstatus, t0
 
 	# start mtimecmp at 40k
-    li      t0, 50000
+    li      t0, 30000
     li      t1, 0x2004000
     sd      t0, 0(t1)
 
@@ -66,17 +66,55 @@ mtrap:
 #
 # general trap handler:
 #
+# all register need to be saved including tX
 	# parse mcause
 	# 3.1.15. Machine Cause Register (mcause)
 	csrr	t1, mcause
-	li		t0, 0x07
-	andi 	t1, t1, 0xf
-	beq 	t0, t1, timerhandler
+	srli 	t0, t1, 0x3f
+	bnez 	t0, interrupts
+
+	# non-interrupt codes:
+	# 0 Instruction address misaligned
+	# 1 Instruction access fault
+	# 2 Illegal instruction
+	# 3 Breakpoint
+	# 4 Load address misaligned
+	# 5 Load access fault
+	# 6 Store/AMO address misaligned
+	# 7 Store/AMO access fault
+	# 8 Environment call from U-mode
+	# 9 Environment call from S-mode
+	# 10 Reserved
+	# 11 Environment call from M-mode
+	# 12 Instruction page fault
+	# 13 Load page fault
+	# 14 Reserved
+	# 15 Store page fault
+	# probably should use a switch statement for this
 	mret
 
-pagehandler:
-	#
+# debugging:
+breakpoint:			# 3
 
+# faults:
+# Page needed to be loaded for an instruction.
+instructionaccess:	# 1
+# Tried to access unallowed memory.
+loadaccess:			# 5
+storeaccess: 		# 7
+# Need to load/store pages for demand paging.
+loadpage: 			# 13
+storepage:			# 15
+	#
+	mret
+
+interrupts:
+	andi 	t1, t1, 0xf
+
+	li		t0, 0x07
+	beq 	t0, t1, timerhandler
+	mret
+	
 timerhandler:
 	# unset timer flag
 	li      t0, 0x80
