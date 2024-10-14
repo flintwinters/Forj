@@ -12,4 +12,10 @@ displays = [
     "/x $sip",
     "*0x2004000",
     "*0x200BFF8",
+    "/xb 0x10000000", # uart regs
+    "/xb 0x10000001", # uart regs
+    "/xb 0x10000002", # uart regs
+    "/xb 0x10000003", # uart regs
+    "/xb 0x10000004", # uart regs
+    "/xb 0x10000005"  # uart regs
 ]

@@ -23,16 +23,16 @@ rv:
 		-lgcc && \
 	( \
 	qemu-system-riscv64 \
-		-s -S \
+		-s \
 		-machine virt \
 		-cpu rv64 \
 		-nographic \
 		-serial mon:stdio \
 		-bios none \
-		-kernel forjos & \
-	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
+		-kernel forjos \
+	# gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
 	)
-	pkill -f qemu-system-riscv64
+	# pkill -f qemu-system-riscv64
 
 asm:
 	cd rv64 && \

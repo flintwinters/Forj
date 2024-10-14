@@ -38,7 +38,7 @@ _start:
     csrw    mstatus, t0
 
 	# start mtimecmp at 40k
-    li      t0, 30000
+    li      t0, 50000
     li      t1, 0x2004000
     sd      t0, 0(t1)
 
@@ -50,6 +50,11 @@ _start:
 	# set trap handler location
     la      t0, mtrap
     csrw    mtvec, t0
+
+	# uart init
+	li  t0, 0x10000000
+    li  t1, 0x3
+    sb  t1, 0x3(t0)
 
 	# enable m interrupts
     li      t0, 0xa0 
@@ -66,7 +71,11 @@ mtrap:
 #
 # general trap handler:
 #
-# all register need to be saved including tX
+# all registers will need to be saved including tX
+	# unset interrupt pending
+	li      t0, 0x80
+    csrc    mip, t0
+
 	# parse mcause
 	# 3.1.15. Machine Cause Register (mcause)
 	csrr	t1, mcause
@@ -116,10 +125,6 @@ interrupts:
 	mret
 
 timerhandler:
-	# unset timer flag
-	li      t0, 0x80
-    csrc    mip, t0
-	
 	# add 30k to mtimecmp
 	li      t1, 0x2004000
 	ld      t0, 0(t1)
@@ -130,6 +135,7 @@ timerhandler:
     mret
 
 # uart
+# https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
 serial:
 	# interrupts = <0x0a>;
 	# interrupt-parent = <0x03>;
@@ -139,12 +145,22 @@ serial:
 
 # kernel
 main:
-	# Uart putchar:
-	# li t0, 1
-	# slli t0, t0, 28
-	# li t1, 0x41
-	# sw t1, 0(t0)
+	# Uart getchar:
+	li  t0, 0x10000000
+
+uartloop:
+	lb  	t1, 5(t0)
+	andi 	t1, t1, 0x1
+	beqz 	t1, nouart
+	
+	lb 		t1, 0(t0)
+	sb 		t1, 0(t0)
+
+	j uartloop
+
+nouart:
 	j main
+
 
 .align 12
 # Sv39 page tables contain 2^9 Page Table Entries
@@ -152,4 +168,4 @@ _page_table_start:
 	.skip 4096
 
 	.size	_start, .-_start
-	.ident	"GCC: (gc891d8dc23e) 13.2.0"
+	.ident	"GCC: (gc891d8dc3e) 13.2.0"
