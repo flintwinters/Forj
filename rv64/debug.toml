@@ -1,0 +1,15 @@
+breakpoints = [
+    "_start",
+    "main",
+    "mtrap",
+]
+displays = [
+    "/x $mstatus",
+    "/i $pc",
+    "/i $mepc",
+    "/x $mcause",
+    "/x $mip",
+    "/x $sip",
+    "*0x2004000",
+    "*0x200BFF8",
+]
