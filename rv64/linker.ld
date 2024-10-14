@@ -54,32 +54,6 @@ SECTIONS
   PROVIDE(_memory_end = ORIGIN(ram) + LENGTH(ram));
   PROVIDE(_heap_end = _memory_end - 4096);
   PROVIDE(_heap_counter = _heap_end + 8);
+  PROVIDE(__uart_base_addr = 0x10000000);
+
 }
-
-/* SECTIONS
-{
-	. = 0x1000;
-	/* Read-only data. *\/
-	.text BLOCK(4K) : ALIGN(4K)
-	{
-		*(.text)
-	}
-
-	/* Read-only data. *\/
-	.rodata BLOCK(4K) : ALIGN(4K)
-	{
-		*(.rodata)
-	}
-
-	/* Read-write data (initialized) *\/
-	.data BLOCK(4K) : ALIGN(4K)
-	{
-		*(.data)
-	}
-
-	/* Read-write data (uninitialized) and stack *\/
-	.bss BLOCK(4K) : ALIGN(4K)
-	{
-		*(.bss)
-	}
-} */
