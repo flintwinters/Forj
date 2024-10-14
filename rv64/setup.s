@@ -51,6 +51,11 @@ _start:
     la      t0, mtrap
     csrw    mtvec, t0
 
+	# uart init
+	li  t0, 0x10000000
+    li  t1, 0x3
+    sb  t1, 0x3(t0)
+
 	# enable m interrupts
     li      t0, 0xa0 
     csrs    mie, t0
@@ -66,22 +71,60 @@ mtrap:
 #
 # general trap handler:
 #
+# all registers will need to be saved including tX
+	# unset interrupt pending
+	li      t0, 0x80
+    csrc    mip, t0
+
 	# parse mcause
 	# 3.1.15. Machine Cause Register (mcause)
 	csrr	t1, mcause
-	li		t0, 0x07
+	srli 	t0, t1, 0x3f
+	bnez 	t0, interrupts
+
+	# non-interrupt codes:
+	# 0 Instruction address misaligned
+	# 1 Instruction access fault
+	# 2 Illegal instruction
+	# 3 Breakpoint
+	# 4 Load address misaligned
+	# 5 Load access fault
+	# 6 Store/AMO address misaligned
+	# 7 Store/AMO access fault
+	# 8 Environment call from U-mode
+	# 9 Environment call from S-mode
+	# 10 Reserved
+	# 11 Environment call from M-mode
+	# 12 Instruction page fault
+	# 13 Load page fault
+	# 14 Reserved
+	# 15 Store page fault
+	# probably should use a switch statement for this
+	mret
+
+# debugging:
+breakpoint:			# 3
+
+# faults:
+# Page needed to be loaded for an instruction.
+instructionaccess:	# 1
+# Tried to access unallowed memory.
+loadaccess:			# 5
+storeaccess: 		# 7
+# Need to load/store pages for demand paging.
+loadpage: 			# 13
+storepage:			# 15
+	#
+	mret
+
+interrupts:
 	andi 	t1, t1, 0xf
+
+	li		t0, 0x07
 	beq 	t0, t1, timerhandler
 	mret
 
-pagehandler:
-	#
-
 timerhandler:
-	# unset timer flag
-	li      t0, 0x80
-    csrc    mip, t0
-	
 	# add 30k to mtimecmp
 	li      t1, 0x2004000
 	ld      t0, 0(t1)
@@ -91,9 +134,33 @@ timerhandler:
 
     mret
 
+# uart
+# https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
+serial:
+	# interrupts = <0x0a>;
+	# interrupt-parent = <0x03>;
+	# clock-frequency = "\08@";
+	# reg = <0x00 0x10000000 0x00 0x100>;
+	# compatible = "ns16550a";
+
 # kernel
 main:
+	# Uart getchar:
+	li  t0, 0x10000000
+
+uartloop:
+	lb  	t1, 5(t0)
+	andi 	t1, t1, 0x1
+	beqz 	t1, nouart
+	
+	lb 		t1, 0(t0)
+	sb 		t1, 0(t0)
+
+	j uartloop
+
+nouart:
 	j main
+
 
 .align 12
 # Sv39 page tables contain 2^9 Page Table Entries
@@ -101,4 +168,4 @@ _page_table_start:
 	.skip 4096
 
 	.size	_start, .-_start
-	.ident	"GCC: (gc891d8dc23e) 13.2.0"
+	.ident	"GCC: (gc891d8dc3e) 13.2.0"
