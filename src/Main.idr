@@ -12,7 +12,7 @@ import Asm
 
 -- https://idris2.readthedocs.io/en/latest/tutorial/interp.html
 
-data Ty = TyNat | TyInt | TyBool | TyString | TyFun Ty Ty
+data Ty = TyNat | TyInt | TyBool | TyStr | TyFun Ty Ty
 
 InterpTy : Ty -> Type
 Context: (n: Nat) -> Type
@@ -22,16 +22,16 @@ Scopes = List (String, (t: Ty ** InterpTy t))
 InterpTy TyNat       = Nat
 InterpTy TyInt       = Int64
 InterpTy TyBool      = Bool
-InterpTy TyString    = String
+InterpTy TyStr       = String
 InterpTy (TyFun a b) = InterpTy a -> InterpTy b
 
 %runElab derive "Ty" [Show,Eq]
 
 showITy: {t: Ty} -> InterpTy t -> String
-showITy {t = TyNat} x = show x
-showITy {t = TyInt} x = show x
-showITy {t = TyBool} x = show x
-showITy {t = TyString} x = show x
+showITy {t = TyNat}  x    = show x
+showITy {t = TyInt}  x    = show x
+showITy {t = TyBool} x    = show x
+showITy {t = TyStr}  x    = show x
 showITy {t = TyFun a b} x = "TyFun " ++ show a ++ show b
 
 data HasType : (i : Fin n)
@@ -46,8 +46,11 @@ data HasType : (i : Fin n)
 data Expr : Scopes -> Context n -> Ty -> Type where
     Var : HasType i s context t -> Expr s context t
     Val : (t: Ty) -> (x : InterpTy t) -> Expr s context t
-    Str : (str : String) -> Expr s context TyString
     Lam : Expr s (a :: context) t -> Expr s context (TyFun a t)
+    Rec : Nat -> 
+          Expr s context a ->
+          Expr s context (TyFun a a) ->
+          Expr s context a
     App : Expr s context (TyFun a t) -> Expr s context a -> Expr s context t
     Op  : (InterpTy a -> InterpTy b -> InterpTy c) ->
         Expr s context a -> Expr s context b -> Expr s context c
@@ -70,15 +73,18 @@ namelookup str ((a, (b ** bb)) :: xs) =
     then Left (show b ++ showITy bb)
     else namelookup str xs
 
+partial
 interp : Env context -> Expr s context t -> InterpTy t
-interp env (Var i)   = lookup i env
-interp env (Val t x)   = x
-interp env (Str x)     = x
-interp env (Lam sc)    = \x => interp (x :: env) sc
-interp env (App f s)   = interp env f (interp env s)
-interp env (Op op x y) = op (interp env x) (interp env y)
-interp env (If x t e)  = if interp env x then interp env t
+interp env (Var i)      = lookup i env
+interp env (Val t x)    = x
+interp env (Lam sc)     = \x => interp (x :: env) sc
+interp env (Rec Z b r)  = interp env b
+interp env (Rec (S n) b r) = interp env (App r (Rec n b r))
+interp env (App f s)    = interp env f (interp env s)
+interp env (Op op x y)  = op (interp env x) (interp env y)
+interp env (If x t e)   = if interp env x then interp env t
                                         else interp env e
+                                        
 add : Expr s context (TyFun TyInt (TyFun TyInt TyInt))
 add = Lam (Lam (Op (+) (Var Stop) (Var (Pop Stop))))
 sub : Expr s context (TyFun TyNat (TyFun TyNat TyNat))
@@ -93,14 +99,15 @@ fact = Lam (If (Op (<=) (Var Stop) (Val TyNat 2))
                     ))
                     (Var Stop)))
 
-A = namelookup "global" [("global", (TyInt ** 1)), ("local", (TyString ** "ok"))]
+A = namelookup "global" [("global", (TyInt ** 1)), ("local", (TyStr ** "ok"))]
 
-sayhi : Expr s context (TyString)
-sayhi = Str "hello!"
+sayhi : Expr s context (TyStr)
+sayhi = Val TyStr "hello!"
 
 partial
 main : IO ()
 main = do 
-          printLn (interp [] fact {s = [("global", (TyInt ** 1))]} 4)
-          printLn $ namelookup "global" [("global", (TyInt ** 1)), ("local", (TyString ** "ok"))]
-          printLn $ namelookup "local" [("global", (TyInt ** 1)), ("local", (TyString ** "ok"))]
+          printLn $ interp [] fact {s = [("global", (TyInt ** 1))]} 4
+          printLn $ show $ interp [] sayhi {s = []}
+          printLn $ namelookup "global" [("global", (TyInt ** 1)), ("local", (TyStr ** "ok"))]
+          printLn $ namelookup "local" [("global", (TyInt ** 1)), ("local", (TyStr ** "ok"))]
