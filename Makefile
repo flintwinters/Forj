@@ -9,7 +9,6 @@ exec:
 # step by step walkthrough on loading riscv qemu
 rv:
 	cd rv64 && \
-	riscv64-unknown-elf-gcc -static -nostdlib -g -ggdb -O0 -ffreestanding -Wall -Wextra -Werror -c main.c -o outmain.o && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
 		linker.ld \
@@ -23,16 +22,16 @@ rv:
 		-lgcc && \
 	( \
 	qemu-system-riscv64 \
-		-s \
+		-s -S \
 		-machine virt \
 		-cpu rv64 \
 		-nographic \
 		-serial mon:stdio \
 		-bios none \
-		-kernel forjos \
-	# gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
+		-kernel forjos & \
+	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
 	)
-	# pkill -f qemu-system-riscv64
+	pkill -f qemu-system-riscv64
 
 asm:
 	cd rv64 && \
