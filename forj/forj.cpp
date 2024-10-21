@@ -188,13 +188,24 @@ public:
     }
     Maybe<Scope*> execute(Stack<Scope*>& s) {
         if (s[0]->t->str == "executable") {((func) s[0]->val)();}
+        else if (s[0]->t->str == "literal") {}
         else if (s[0]->t->str == "bang") {
-            if (s[0]->val == 2) {pull(); s.pull(); return execute(s);}
+            if (s[0]->val == 2) {
+                pull(); s.pull(); return execute(s);
+            }
             s[0]->val -= 1;
         }
         else if (s[0]->t->str == "stacktype") {
             Stack<Scope*> v = *(Stack<Scope*>*) s[0]->val;
-            // TODO
+            for (int i = v.sp; i >= 0; i--) {
+                if (v[i]->t->str == "executable") {
+                    ((func) v[i]->val)();
+                }
+                if (v[i]->t->str == "bang") {
+                    if (v[i]->val == 2) {s.pull(); execute(s);}
+                }
+                s.push(v[i]);
+            }
         }
         else {return Fail<Scope*>("Can't execute type "+s[0]->t->str);}
         pull();
@@ -278,8 +289,9 @@ public:
 };
 
 
+int N = 0;
 void printplus() {
-    printf("++++");
+    printf("++++%d\n", N++);
 }
 int main() {
     FILE* FP = fopen("test.qfj", "r");
