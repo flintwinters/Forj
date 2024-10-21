@@ -20,7 +20,7 @@ public:
     string str() {return "<" + to_string(i) + ">: " + msg;}
     string str(string s) {
         s.insert(i-1, "\033[31;1;4m!>>>>>");
-        return "<" + to_string(i) + ">: " + msg + s + "\033[0m";
+        return "\033[33;1;1m<" + to_string(i) + ">: " + msg + "\033[0m\n" + s + "\033[0m";
     }
 };
 
@@ -78,6 +78,7 @@ public:
     }
 };
 
+int min(int a, int b) {return (a > b) ? b : a;}
 typedef struct obj {word w; Scope* t;} obj;
 class TypedStack {
 public:
@@ -90,10 +91,12 @@ public:
         string top = "w: ";
         string bot = "t: ";
         for (int i = S.sp; i >= 0; i--) {
-            top += ((Scope*) S[i].w)->str + "\t";
-            bot += S[i].t->str + "\t";
+            string a = ((Scope*) S[i].w)->str;
+            string b = S[i].t->str;
+            top += a.substr(0, min(4, a.size())) + "\t";
+            bot += b.substr(0, min(4, b.size())) + "\t";
         }
-        return top + "\n" + bot;
+        return "\033[34;1;4m" + top + "\033[0m\n\033[35;1;1m" + bot + "\033[0m";
     }
 };
 
@@ -182,7 +185,7 @@ public:
         Maybe<Scope*> m = get(T[0]->s);
         Maybe<int> n = tonum(T[0]);
         if (m.fail == n.fail) {
-            return Fail<Token*>("Failed to find scope '" + T[0]->s + "'", parseidx) + " For attempted final resolution";
+            return Fail<Token*>("Failed to find scope '" + T[0]->s + "'", parseidx) + " For attempted final resolution in '" + scope[0]->str + "'";
         }
         if (!m.fail) {S.push((word) m.val, searchall("scopetype").val);}
         else {S.push(n.val, searchall("scopetype").val);}
@@ -190,6 +193,7 @@ public:
         return Success(T[0]);
     }
     Maybe<Token*> execute() {
+        printf("%s\n", U[0]->s.c_str());
         return Success<Token*>(0);
     }
     Maybe<Token*> parse() {
@@ -214,7 +218,7 @@ public:
             if (tok->s == "") {search = getscope();}
             else {
                 Maybe<Scope*> m = get(tok->s);
-                if (m.fail) {return Fail<Token*>(m.msg, parseidx) + " For subscope resolution";}
+                if (m.fail) {return Fail<Token*>(m.msg, parseidx) + " For subscope of '" + scope[0]->str + "'";}
                 search = m.val;
             }
             pull();
@@ -250,7 +254,7 @@ public:
         i = 1;
         while (T[0]->s[i] == '!') {i++;}
         splitback(i);
-        if (i == 1) {pull(); return execute();}
+        if (i == 1) {return execute();}
         S.push(i, searchall("bang").val);
         search = 0;
         return Success(pull());
@@ -267,7 +271,7 @@ int main() {
     fclose(FP);
 
     Build b(s);
-    printf("FILE:\"\"\"%s\"\"\"\n", b.s.c_str());
+    // printf("FILE:\"\"\"%s\"\"\"\n", b.s.c_str());
     b.scope.push(new Scope("global"));
     b.scope[0]->append("nothing");
     b.scope[0]->append("bang");
@@ -279,8 +283,8 @@ int main() {
     while (b.T.sp != -1) {
         m = b.parse();
         if (m.fail) {
-            printf("Error:\n");
-            printf("%s\n", (m+"\n"+b.S.str()).str(b.s).c_str());
+            printf("\033[31;1;4mError:\033[0m\n");
+            printf("%s\n%s\n", m.str(b.s).c_str(), b.S.str().c_str());
             return 1;
         }
     }

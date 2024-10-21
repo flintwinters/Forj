@@ -4,6 +4,11 @@ all:
 exec:
 	rlwrap pack --extra-args "-q" exec src/Main.idr
 
+fjrun:
+	cd forj && \
+	g++ -g forj.cpp -o forjlang && \
+	./forjlang
+
 fj:
 	cd forj && \
 	g++ -g forj.cpp -o forjlang && \
