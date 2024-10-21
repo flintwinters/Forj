@@ -90,8 +90,7 @@ public:
         string top = "w: ";
         string bot = "t: ";
         for (int i = S.sp; i >= 0; i--) {
-            if (S[i].t->t == scopetype) {top += ((Scope*) S[i].w)->str + "\t";}
-            else {top += to_string(S[i].w) + "\t";}
+            top += ((Scope*) S[i].w)->str + "\t";
             bot += S[i].t->str + "\t";
         }
         return top + "\n" + bot;
@@ -155,11 +154,13 @@ public:
     TypedStack S;
     Stack<Scope*> scope;
     Stack<Token*> T;
+    Stack<Token*> U;
     Scope* search = 0;
     string s;
     int parseidx = 0;
     Build(string s): s(s) {
         T.push(new Token(s));
+        U.push(new Token(""));
     }
     void splitback(int i, int n = 0) {
         if (i == T[0]->s.length()) {return;}
@@ -172,7 +173,8 @@ public:
     }
     Token* pull() {
         parseidx += T[0]->s.size();
-        return T.pull();
+        // printf("<%s|%s>\n", T[0]->s.c_str(), U[0]->s.c_str());
+        return U.push(T.pull());
     }
     Maybe<Scope*> get(string s) {return getscope()->get(s);}
     Maybe<Scope*> searchall(string s) {return getscope()->searchall(s);}
@@ -186,6 +188,9 @@ public:
         else {S.push(n.val, searchall("scopetype").val);}
         pull();
         return Success(T[0]);
+    }
+    Maybe<Token*> execute() {
+        return Success<Token*>(0);
     }
     Maybe<Token*> parse() {
         int i = 0;
@@ -204,7 +209,7 @@ public:
         if (t.fail) {return final();}
         splitback(t.val);
         Token* tok = pull();
-        if (!contains("!\"", T[0]->s[0])) {splitback(1);}
+        if (!contains("!", T[0]->s[0])) {splitback(1);}
         if (T[0]->s == ":") {
             if (tok->s == "") {search = getscope();}
             else {
@@ -226,9 +231,9 @@ public:
             return Success(pull());
         }
         if (T[0]->s == "\"") {
-            i = 1;
+            pull();
             if (!search) {
-                string s = pull()->s;
+                string s = "";
                 while ((t = T[0]->find("\"")).fail) {s += pull()->s;}
                 splitback(t.val, 1);
                 s += pull()->s;
@@ -244,8 +249,9 @@ public:
         }
         i = 1;
         while (T[0]->s[i] == '!') {i++;}
-        S.push(i, searchall("bang").val);
         splitback(i);
+        if (i == 1) {pull(); return execute();}
+        S.push(i, searchall("bang").val);
         search = 0;
         return Success(pull());
     }
@@ -267,6 +273,7 @@ int main() {
     b.scope[0]->append("bang");
     b.scope[0]->append("scopetype");
     b.scope[0]->append("string");
+    b.scope[0]->append("executable");
     b.scope[0]->append("ok")->append("beeb")->append("sob")->append("soob");
     Maybe<Token*> m;
     while (b.T.sp != -1) {
