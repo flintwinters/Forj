@@ -44,9 +44,8 @@ public:
 };
 
 typedef enum type {
-    nothing, value, bang, scopetype
+    nothing, bang, scopetype
 } type;
-typedef struct obj {word w; type t;} obj;
 
 bool contains(string s, char c) {
     for (int i = 0; i < s.size(); i++) {
@@ -57,31 +56,43 @@ bool contains(string s, char c) {
 
 class Scope {
 public:
-    string name;
+    string str;
+    word val;
     type t = nothing;
+    Scope* parent;
     map<string, Scope*> M;
-    Scope(string name): name(name) {}
-    Scope* append(string s) {return M[s] = new Scope(s);}
+    Scope(string str): str(str) {}
+    Scope(string str, Scope* parent): str(str), parent(parent) {}
+    Scope* append(string s) {
+        return M[s] = new Scope(s, this);
+    }
     Maybe<Scope*> get(string s) {
         if (M.find(s) == M.end()) {return Fail<Scope*>("Couldn't find '"+s+"' in scope");}
         return Success(M[s]);
     }
+    Maybe<Scope*> searchall(string s) {
+        Maybe<Scope*> m = get(s);
+        if (!m.fail) {return m;}
+        if (parent) {return parent->searchall(s);}
+        return Fail<Scope*>("Couldn't find '"+s+"' in any parent scope");
+    }
 };
 
+typedef struct obj {word w; Scope* t;} obj;
 class TypedStack {
 public:
     Stack<obj> S;
     TypedStack() {}
     obj pull() {return S.pull();}
-    void push(word w, type t) {S.push({w, t});}
+    void push(word w, Scope* t) {S.push({w, t});}
     obj operator[](int i) {return S[i];}
     string str() {
         string top = "w: ";
         string bot = "t: ";
         for (int i = S.sp; i >= 0; i--) {
-            if (S[i].t == scopetype) {top += ((Scope*) S[i].w)->name + "\t";}
+            if (S[i].t->t == scopetype) {top += ((Scope*) S[i].w)->str + "\t";}
             else {top += to_string(S[i].w) + "\t";}
-            bot += to_string(S[i].t) + "\t";
+            bot += S[i].t->str + "\t";
         }
         return top + "\n" + bot;
     }
@@ -164,23 +175,20 @@ public:
         return T.pull();
     }
     Maybe<Scope*> get(string s) {return getscope()->get(s);}
+    Maybe<Scope*> searchall(string s) {return getscope()->searchall(s);}
     Maybe<Token*> final() {
         Maybe<Scope*> m = get(T[0]->s);
         Maybe<int> n = tonum(T[0]);
         if (m.fail == n.fail) {
             return Fail<Token*>("Failed to find scope '" + T[0]->s + "'", parseidx) + " For attempted final resolution";
         }
-        if (!m.fail) {S.push((word) m.val, scopetype);}
-        else {S.push(n.val, value);}
+        if (!m.fail) {S.push((word) m.val, searchall("scopetype").val);}
+        else {S.push(n.val, searchall("scopetype").val);}
         pull();
-        search = 0;
         return Success(T[0]);
     }
     Maybe<Token*> parse() {
         int i = 0;
-        if (T[0]->s == "hi") {
-            printf("hi");
-        }
         while (contains(" \n\t\r\b", T[0]->s[i])) {i++;}
         if (i) {
             if (i == T[0]->s.size()) {return Success(pull());}
@@ -196,7 +204,7 @@ public:
         if (t.fail) {return final();}
         splitback(t.val);
         Token* tok = pull();
-        if (T[0]->s[0] != '!') {splitback(1);}
+        if (!contains("!\"", T[0]->s[0])) {splitback(1);}
         if (T[0]->s == ":") {
             if (tok->s == "") {search = getscope();}
             else {
@@ -218,8 +226,15 @@ public:
             return Success(pull());
         }
         if (T[0]->s == "\"") {
-            pull();
-            if (!search) {return Fail<Token*>("Attempt to declare lone scope.", parseidx);}
+            i = 1;
+            if (!search) {
+                string s = pull()->s;
+                while ((t = T[0]->find("\"")).fail) {s += pull()->s;}
+                splitback(t.val, 1);
+                s += pull()->s;
+                S.push((word) new Scope(s), searchall("string").val);
+                return Success(pull());
+            }
             t = T[0]->find("\"");
             splitback(t.val);
             if (t.fail) {return Fail<Token*>(t.msg, parseidx);}
@@ -229,9 +244,9 @@ public:
         }
         i = 1;
         while (T[0]->s[i] == '!') {i++;}
-        S.push(i, bang);
+        S.push(i, searchall("bang").val);
         splitback(i);
-        if (search) {search = 0;}
+        search = 0;
         return Success(pull());
     }
 };
@@ -248,6 +263,10 @@ int main() {
     Build b(s);
     printf("FILE:\"\"\"%s\"\"\"\n", b.s.c_str());
     b.scope.push(new Scope("global"));
+    b.scope[0]->append("nothing");
+    b.scope[0]->append("bang");
+    b.scope[0]->append("scopetype");
+    b.scope[0]->append("string");
     b.scope[0]->append("ok")->append("beeb")->append("sob")->append("soob");
     Maybe<Token*> m;
     while (b.T.sp != -1) {
