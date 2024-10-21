@@ -99,6 +99,17 @@ fact = Lam (If (Op (<=) (Var Stop) (Val TyNat 2))
                     ))
                     (Var Stop)))
 
+{-
+:"fact" [64i] [64i] function type !
+fact:[
+    :"n" fact:arg !!
+    [[n 1 -] !! [fact *] !!]
+    n 2 == !! ?!!
+] fact:= !
+
+-}
+
+
 A = namelookup "global" [("global", (TyInt ** 1)), ("local", (TyStr ** "ok"))]
 
 sayhi : Expr s context (TyStr)

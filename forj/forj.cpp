@@ -41,6 +41,7 @@ public:
         return t;
     }
     T operator[](int i) {return s[sp-i];}
+    bool isempty() {return sp<=-1;}
 };
 
 typedef void(*func)(void);
@@ -52,10 +53,10 @@ bool contains(string s, char c) {
     return false;
 }
 
-class Scope {
+class Scope : public Stack<Scope*> {
 public:
     string str;
-    word val;
+    word val = 0;
     Scope* t = 0;
     Scope* parent;
     map<string, Scope*> M;
@@ -187,12 +188,12 @@ public:
         return Success(T[0]);
     }
     Maybe<Scope*> execute(Stack<Scope*>& s) {
-        if (s[0]->t->str == "executable") {((func) s[0]->val)();}
+        if (s[0]->t->str == "executable") {
+            ((func) s.pull()->val)();
+        }
         else if (s[0]->t->str == "literal") {}
         else if (s[0]->t->str == "bang") {
-            if (s[0]->val == 2) {
-                pull(); s.pull(); return execute(s);
-            }
+            if (s[0]->val <= 2) {s.pull(); return execute(s);}
             s[0]->val -= 1;
         }
         else if (s[0]->t->str == "stacktype") {
@@ -201,8 +202,8 @@ public:
                 if (v[i]->t->str == "executable") {
                     ((func) v[i]->val)();
                 }
-                if (v[i]->t->str == "bang") {
-                    if (v[i]->val == 2) {s.pull(); execute(s);}
+                else if (v[i]->t->str == "bang") {
+                    if (v[i]->val == 2) {execute(s);}
                 }
                 s.push(v[i]);
             }
@@ -241,9 +242,12 @@ public:
                 Maybe<Scope*> m = execute(S);
                 if (m.fail) {return Fail<Token*>("")+m.msg;}
             }
-            S.push(new Scope("", getscope(), searchall("bang").val));
-            search = 0;
-            return Success(pull());
+            else {
+                S.push(new Scope("", getscope(), searchall("bang").val));
+                S[0]->val = i;
+                search = 0;
+                return Success(pull());
+            }
         }
         splitback(1);
         if (T[0]->s == ":") {
@@ -257,9 +261,12 @@ public:
             return parse();
         }
         if (T[0]->s == "[") {
-            if (search) {scope.push(search);}
-            else {scope.push(new Scope("", getscope(), searchall("stacktype").val));}
-            search = 0;
+            S.push(new Scope("", scope[0], searchall("stacktype").val));
+            if (search) {
+                scope.push(search);
+                search = 0;
+            }
+            else {scope.push(S[0]);}
             return Success(pull());
         }
         if (T[0]->s == "]") {

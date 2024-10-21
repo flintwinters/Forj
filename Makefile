@@ -12,7 +12,7 @@ fjrun:
 fj:
 	cd forj && \
 	g++ -g forj.cpp -o forjlang && \
-	gdb ./forjlang -ex "source `pwd`/pyg.py"
+	gdb -q ./forjlang -ex "source `pwd`/pyg.py"
 
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
