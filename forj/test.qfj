@@ -1,9 +1,21 @@
 ok:beeb:[ sob ]
 :ok
 :"hi"
+
 hi
 hi:[
     :"test"
+    [ ]
 ]
+
+[
+
+    ok
+]
+1 + !
+
 hi:test
+
+
+
 hi

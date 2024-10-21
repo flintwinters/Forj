@@ -43,9 +43,7 @@ public:
     T operator[](int i) {return s[sp-i];}
 };
 
-typedef enum type {
-    nothing, bang, scopetype
-} type;
+typedef void(*func)(void);
 
 bool contains(string s, char c) {
     for (int i = 0; i < s.size(); i++) {
@@ -58,13 +56,12 @@ class Scope {
 public:
     string str;
     word val;
-    type t = nothing;
+    Scope* t = 0;
     Scope* parent;
     map<string, Scope*> M;
-    Scope(string str): str(str) {}
-    Scope(string str, Scope* parent): str(str), parent(parent) {}
-    Scope* append(string s) {
-        return M[s] = new Scope(s, this);
+    Scope(string str, Scope* parent, Scope* t): str(str), t(t), parent(parent) {}
+    Scope* append(string s, Scope* t) {
+        return M[s] = new Scope(s, this, t);
     }
     Maybe<Scope*> get(string s) {
         if (M.find(s) == M.end()) {return Fail<Scope*>("Couldn't find '"+s+"' in scope");}
@@ -79,26 +76,21 @@ public:
 };
 
 int min(int a, int b) {return (a > b) ? b : a;}
-typedef struct obj {word w; Scope* t;} obj;
-class TypedStack {
-public:
-    Stack<obj> S;
-    TypedStack() {}
-    obj pull() {return S.pull();}
-    void push(word w, Scope* t) {S.push({w, t});}
-    obj operator[](int i) {return S[i];}
-    string str() {
-        string top = "w: ";
-        string bot = "t: ";
-        for (int i = S.sp; i >= 0; i--) {
-            string a = ((Scope*) S[i].w)->str;
-            string b = S[i].t->str;
+
+string printstack(Stack<Scope*> S) {
+    string top = "w:\t";
+    string bot = "t:\t";
+    for (int i = S.sp; i >= 0; i--) {
+        if (S[i]->t->str != "literal") {
+            string a = S[i]->str;
             top += a.substr(0, min(4, a.size())) + "\t";
-            bot += b.substr(0, min(4, b.size())) + "\t";
         }
-        return "\033[34;1;4m" + top + "\033[0m\n\033[35;1;1m" + bot + "\033[0m";
+        else {top += to_string(S[i]->val) + "\t";}
+        string b = S[i]->t->str;
+        bot += b.substr(0, min(4, b.size())) + "\t";
     }
-};
+    return "\033[34;1;4m" + top + "\033[0m\n\033[35;1;1m" + bot + "\033[0m";
+}
 
 class Token {
 public:
@@ -154,7 +146,7 @@ Maybe<int> tonum(Token* t) {
 
 class Build {
 public:
-    TypedStack S;
+    Stack<Scope*> S;
     Stack<Scope*> scope;
     Stack<Token*> T;
     Stack<Token*> U;
@@ -176,57 +168,87 @@ public:
     }
     Token* pull() {
         parseidx += T[0]->s.size();
-        // printf("<%s|%s>\n", T[0]->s.c_str(), U[0]->s.c_str());
         return U.push(T.pull());
     }
     Maybe<Scope*> get(string s) {return getscope()->get(s);}
     Maybe<Scope*> searchall(string s) {return getscope()->searchall(s);}
     Maybe<Token*> final() {
-        Maybe<Scope*> m = get(T[0]->s);
+        Maybe<Scope*> m = (search) ? get(T[0]->s) : searchall(T[0]->s);
         Maybe<int> n = tonum(T[0]);
         if (m.fail == n.fail) {
-            return Fail<Token*>("Failed to find scope '" + T[0]->s + "'", parseidx) + " For attempted final resolution in '" + scope[0]->str + "'";
+            return Fail<Token*>("Failed to find scope '" + T[0]->s + "'", parseidx) + " For attempted final resolution in '" + getscope()->str + "'";
         }
-        if (!m.fail) {S.push((word) m.val, searchall("scopetype").val);}
-        else {S.push(n.val, searchall("scopetype").val);}
+        if (!m.fail) {S.push(m.val);}
+        else {
+            S.push(new Scope("", scope[0], searchall("literal").val));
+            S[0]->val = n.val;
+        }
         pull();
         return Success(T[0]);
     }
-    Maybe<Token*> execute() {
-        printf("%s\n", U[0]->s.c_str());
-        return Success<Token*>(0);
+    Maybe<Scope*> execute(Stack<Scope*>& s) {
+        if (s[0]->t->str == "executable") {((func) s[0]->val)();}
+        else if (s[0]->t->str == "bang") {
+            if (s[0]->val == 2) {pull(); s.pull(); return execute(s);}
+            s[0]->val -= 1;
+        }
+        else if (s[0]->t->str == "stacktype") {
+            Stack<Scope*> v = *(Stack<Scope*>*) s[0]->val;
+            // TODO
+        }
+        else {return Fail<Scope*>("Can't execute type "+s[0]->t->str);}
+        pull();
+        return Success<Scope*>(s[0]);
     }
-    Maybe<Token*> parse() {
+    bool cleanwhitespace() {
         int i = 0;
         while (contains(" \n\t\r\b", T[0]->s[i])) {i++;}
         if (i) {
-            if (i == T[0]->s.size()) {return Success(pull());}
+            if (i == T[0]->s.size()) {return true;}
+            search = 0;
             splitback(i-1, 1);
             pull();
         }
         Maybe<int> t = T[0]->find(" \n\t\r\b");
         if (!t.fail) {
-            splitback(t.val, 1);
+            splitback(t.val);
             if (!t.val) {parse();}
         }
-        t = T[0]->find(":[]!\"");
+        return false;
+    }
+    Maybe<Token*> parse() {
+        if (cleanwhitespace()) {return Success(pull());}
+        Maybe<int> t = T[0]->find(":[]!\"");
         if (t.fail) {return final();}
         splitback(t.val);
         Token* tok = pull();
-        if (!contains("!", T[0]->s[0])) {splitback(1);}
+        if (T[0]->s[0] == '!') {
+            int i = 1;
+            while (T[0]->s[i] == '!') {i++;}
+            splitback(i);
+            if (i == 1) {
+                Maybe<Scope*> s = execute(S);
+                if (s.fail) {return Fail<Token*>("")+s.msg;}
+            }
+            S.push(new Scope("", getscope(), searchall("bang").val));
+            search = 0;
+            return Success(pull());
+        }
+        splitback(1);
         if (T[0]->s == ":") {
             if (tok->s == "") {search = getscope();}
             else {
                 Maybe<Scope*> m = get(tok->s);
-                if (m.fail) {return Fail<Token*>(m.msg, parseidx) + " For subscope of '" + scope[0]->str + "'";}
+                if (m.fail) {return Fail<Token*>(m.msg, parseidx) + " For subscope of '" + getscope()->str + "'";}
                 search = m.val;
             }
             pull();
             return parse();
         }
         if (T[0]->s == "[") {
-            scope.push(getscope());
-            if (search) {search = 0;}
+            if (search) {scope.push(search);}
+            else {scope.push(new Scope("", getscope(), searchall("stacktype").val));}
+            search = 0;
             return Success(pull());
         }
         if (T[0]->s == "]") {
@@ -241,26 +263,24 @@ public:
                 while ((t = T[0]->find("\"")).fail) {s += pull()->s;}
                 splitback(t.val, 1);
                 s += pull()->s;
-                S.push((word) new Scope(s), searchall("string").val);
+                S.push(new Scope(s, getscope(), searchall("string").val));
                 return Success(pull());
             }
             t = T[0]->find("\"");
             splitback(t.val);
             if (t.fail) {return Fail<Token*>(t.msg, parseidx);}
-            scope[0]->append(pull()->s);
+            scope[0]->append(pull()->s, searchall("scopetype").val);
             search = 0;
             return Success(pull());
         }
-        i = 1;
-        while (T[0]->s[i] == '!') {i++;}
-        splitback(i);
-        if (i == 1) {return execute();}
-        S.push(i, searchall("bang").val);
-        search = 0;
         return Success(pull());
     }
 };
 
+
+void printplus() {
+    printf("++++");
+}
 int main() {
     FILE* FP = fopen("test.qfj", "r");
     string s;
@@ -272,22 +292,29 @@ int main() {
 
     Build b(s);
     // printf("FILE:\"\"\"%s\"\"\"\n", b.s.c_str());
-    b.scope.push(new Scope("global"));
-    b.scope[0]->append("nothing");
-    b.scope[0]->append("bang");
-    b.scope[0]->append("scopetype");
-    b.scope[0]->append("string");
-    b.scope[0]->append("executable");
-    b.scope[0]->append("ok")->append("beeb")->append("sob")->append("soob");
+    b.scope.push(new Scope("global", 0, 0));
+    b.scope[0]->append("nothing", 0);
+    b.scope[0]->append("bang", 0);
+    b.scope[0]->append("literal", 0);
+    Scope* scopetype = b.scope[0]->append("scopetype", 0);
+    b.scope[0]->append("string", 0);
+    b.scope[0]->append("stacktype", 0);
+    Scope* executable = b.scope[0]->append("executable", 0);
+    b.scope[0]->append("sayhi", 0);
+    b.scope[0]->append("ok",    scopetype)->
+                append("beeb",  scopetype)->
+                append("sob",   scopetype)->
+                append("soob",  scopetype);
+    b.scope[0]->append("+", executable)->val = (word) printplus;
     Maybe<Token*> m;
     while (b.T.sp != -1) {
         m = b.parse();
         if (m.fail) {
             printf("\033[31;1;4mError:\033[0m\n");
-            printf("%s\n%s\n", m.str(b.s).c_str(), b.S.str().c_str());
+            printf("%s\n%s\n", m.str(b.s).c_str(), printstack(b.S).c_str());
             return 1;
         }
     }
-    printf("%s\n", b.S.str().c_str());
+    printf("%s\n", printstack(b.S).c_str());
     return 0;
 }
