@@ -238,8 +238,8 @@ public:
             while (T[0]->s[i] == '!') {i++;}
             splitback(i);
             if (i == 1) {
-                Maybe<Scope*> s = execute(S);
-                if (s.fail) {return Fail<Token*>("")+s.msg;}
+                Maybe<Scope*> m = execute(S);
+                if (m.fail) {return Fail<Token*>("")+m.msg;}
             }
             S.push(new Scope("", getscope(), searchall("bang").val));
             search = 0;
