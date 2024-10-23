@@ -2,24 +2,40 @@ ok:beeb:[ sob ]
 :ok
 :"hi"
 
-hi
+ok hi ok:beeb
+
+:ok
+ok:[ beeb :beeb ]
+
++ + +
+
+:ok
+ok:[ beeb beeb :beeb ] breakpoint!
++!+ +
+
+( this is a comment )
+(another comment)
 hi:[
     :"test"
-    [ ]
 ]
-
-[
-
-    ok
-]
-1 + !
-1 + !! !
-1 + !
-
-[ 1 2 + ] !
-
 hi:test
 
+"here is a string"
 
+[
+    [ ]
+    ok
+]
+1 2 + !
+5 6 + !
 
-hi
+[ 0 2 5 + ]
+[ 0 [ 1 2 + ] !! 2 5 + ] !
+[ 0 2 + 5 + ] !
+ok[[ok]]
+[[]]
+[[1]]
+[1]
+[ ]
+[ [ ] ]
+[ [ 1 ] ]

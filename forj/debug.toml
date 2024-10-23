@@ -1,12 +1,8 @@
 breakpoints = [
-    "238",
+    # "236",
+    # "225",
+    "BREAKPOINT",
+    "223",
 ]
 displays = [
-    "*search",
-    "*S[0]",
-    "*S[0]->t",
-    "*T[0]",
-    "*T[1]",
-    "*scope[0]",
-    "*scope[0]->t",
 ]

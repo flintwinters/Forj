@@ -23,7 +23,7 @@ public:
     string str(string s) {
         if (l) {s.insert(i+l, "\033[0m");}
         s.insert(i, "\033[31;1;4m!>>>>>");
-        return "\033[33;1;1m<" + to_string(i) + ">: " + (*this) + "\033[0m\n" + s + "\033[0m";
+        return "\033[33;1m<" + to_string(i) + ">: " + (*this) + "\033[0m\n" + s + "\033[0m";
     }
 };
 template <typename T> Maybe<T> Fail(string msg, int i = 0, int l = 0) {return Maybe<T>(msg, i, l);}
@@ -66,12 +66,12 @@ public:
     string name;
     Node* parent;
     Node* type;
-    word val;
+    word val = 0;
     func f;
     Node(string s, Node* t, Node* p): name(s), type(t), parent(p) {}
     bool in(string s) {return find(s) != end();}
     Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t, this);}
-    Maybe<Node*> get(string s) {
+    Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
@@ -86,8 +86,18 @@ public:
     }
     string str() {
         return Stack::str([](Node* n)->string{
-            if (n->isempty()) {return to_string(n->val);}
-            return "<"+n->str()+">";
+            if (n->type == tliteral) {
+                return "\033[90;1m" + to_string(n->val) + "\033[0m";
+            }
+            if (n->type == texec) {
+                return "\033[31m" + to_string(n->val) + "\033[0m";
+            }
+            if (n->type == tstring) {
+                return "\033[32m\"" + *(string*) n->val + "\"\033[0m";
+            }
+            if (n->isempty()) {return "<>";}
+            if (n->type == tarray) {return " <"+n->str()+"> ";}
+            return "<"+to_string(n->val)+">";
         });
     }
 };
@@ -98,27 +108,30 @@ public:
     Wrap* prev, *next;
     Wrap(Node* t, Wrap* p, Wrap* n = 0): t(t), prev(p), next(n) {}
     Wrap* pushscope(Node* node) {return next = new Wrap(node, this);}
-    Wrap* pullscope() {Wrap* w = prev; delete this; return w;}
+    Wrap* pullscope() {Wrap* w = prev; w->next = next; delete this; return w;}
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->global(s);
         if (m) {return m;}
         if (prev) {return prev->global(s);}
         return m;
     }
-    Maybe<Node*> search(string s) {return (searching) ? t->get(s) : global(s);}
+    Maybe<Node*> search(string s) {return (searching) ? t->getvar(s) : global(s);}
+    int scopedepth() {
+        if (prev) {return 1+prev->scopedepth();}
+        return 1;
+    }
 
     Node* peek(int i = 0) {return t->peek(i);}
     Node* push(Node* n) {return t->push(n);}
-    Node* push() {return push(new Node("", 0, t));}
     Node* pull() {return t->pull();}
 };
 
-class Text : public Stack<string>, public string {
+class Text : public Stack<string> {
 public:
     int idx = 0;
     Wrap* W = 0;
     Stack<string> U;
-    Text(string s, Wrap* w): string(s), W(w) {push(s);}
+    Text(string s, Wrap* w): W(w) {push(s);}
     string pull() {
         idx += peek().size();
         return U.push(Stack::pull());
@@ -151,9 +164,8 @@ public:
         int i = 0;
         int base = 10;
         if (s[0] == '0') {
-            if (s[1] == 'x') {base = 16; i++;}
-            else if (s[1] == 'b') {base = 2; i++;}
-            i++;
+            if (s[1] == 'x') {base = 16; i+=2;}
+            else if (s[1] == 'b') {base = 2; i+=2;}
         }
         return stoi(s.substr(i), nullptr, base);
     }
@@ -161,6 +173,8 @@ public:
 
     bool in(string match, char n);
     bool cleanwhitespace();
+    string capture(string close);
+    Maybe<string> final(string s);
     Maybe<string> parse();
 };
 
@@ -175,81 +189,102 @@ bool Text::cleanwhitespace() {
     }
     return false;
 }
+
+string Text::capture(string close) {
+    pull();
+    while (peek() == "") {pull();}
+    string str = "";
+    Maybe<int> i = find(close);
+    while (!i) {str += pull(); i = find(close);}
+    split(i, 1);
+    str += pull();
+    return str;
+}
+Maybe<string> Text::final(string s) {
+    if (s == "") {return peek();}
+    if (isnum(s[0])) {
+        W->push(new Node(s, tliteral, W->t))->val = tonum(s);
+        return peek();
+    }
+    Maybe<Node*> m = W->search(s);
+    if (!m) {return Fail<string>(m, idx, s.size());}
+    if (W->searching) {W = W->pullscope(); W->push(m);}
+    else {W->push(m);}
+    return peek();
+}
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
-    t = splitfind(":[]!\"");
+    t = splitfind(":[](!\"");
     if (!t) {
-        string s = peek();
-        if (s == "") {return pull();}
-        if (isnum(s[0])) {W->push()->val = tonum(s); return pull();}
-        Maybe<Node*> m = W->search(s);
-        if (!m) {return Fail<string>(m, idx, s.size());}
-        if (W->searching) {W = W->pullscope(); W->push(m);}
-        else {W->push(m);}
-        return pull();
+        Maybe<string> m = final(peek());
+        if (m) {return pull();}
+        return m;
     }
     string s = pull();
-    if (t == '!') {
-        int i = 0;
-        while (peek()[++i] == '!');
-        split(i);
-        if (i == 1) {
-            pull();
-            W->peek()->type->f(W->peek(), W);
-        }
-        else {
-            W->push(new Node(peek(), tbang, W->t))->val = i;
-        }
-        W->searching = false;
-        return pull();
-    }
-    split(1);
     if (t == ':') {
-        if (s == "") {(W = W->pushscope(W->t))->searching = true;}
+        split(1);
+        if (s == "") {W = W->pushscope(W->t);}
         else {
             Maybe<Node*> m = W->search(s);
             if (!m) {return Fail<string>(m, idx) + " For subscope of '" + m->name + "'";}
             if (!W->searching) {W = W->pushscope(m);}
-            W->searching = true;
             W->t = m;
         }
+        W->searching = true;
+    }
+    split(1);
+    if (s != "") {final(s);}
+    if (t == '!') {
+        pull(); pull();
+        int i = 0;
+        while (peek()[i] == '!') {i++;}
+        split(i);
+        pull();
+        if (i) {W->push(new Node(peek(), tbang, W->t))->val = i;}
+        else {W->peek()->type->f(W->peek(), W);}
+        W->searching = false;
+        return s;
     }
     else if (t == '[') {
-        if (W->searching) {W->searching = false;}
-        else {W = W->pushscope(new Node("", tarray, W->t));}
-        return pull();
+        Node* n = W->t;
+        if (W->searching) {W = W->pullscope()->pushscope(n);}
+        else {W = W->pushscope(new Node("", tarray, n));}
     }
     else if (t == ']') {
         Node* n = W->t;
         (W = W->pullscope())->push(n);
     }
     else if (t == '\"') {
-        pull();
-        string str = "";
-        Maybe<int> i = find("\"");
-        while (!i) {s += pull(); i = find("\"");}
-        split(i, 1);
-        s += pull();
+        string str = capture("\"");
         if (W->searching) {
-            W->t->addvar(s, tnothing);
-            W->searching = false;
+            W->t->addvar(str, tnothing);
+            W = W->pullscope();
             return pull();
         }
-        W->push(new Node("", tstring, W->t));
-        W->peek()->val = (word) new string(s);
-        return pull();
+        W->push(new Node("", tstring, 0))->val = (word) new string(str);
+        return str;
     }
+    else if (t == '(') {return capture(")");}
     return pull();
 }
 
 Maybe<Node*> typefunc(Node* n, Wrap* W) {printf("hi from typefunc\n"); return n;}
 Maybe<Node*> nothingfunc(Node* n, Wrap* W) {printf("hi from nothingfunc\n"); return n;}
 Maybe<Node*> stringfunc(Node* n, Wrap* W) {printf("hi from stringfunc\n"); return n;}
-Maybe<Node*> literalfunc(Node* n, Wrap* W) {printf("hi from literalfunc\n"); return n;}
-Maybe<Node*> arrayfunc(Node* n, Wrap* W) {printf("hi from arrayfunc\n"); return n;}
+Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
+Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
+    W->pull();
+    for (int i = 0; i <= n->sp; i++) {
+        W->push(n->peek(n->sp-i));
+        if (W->peek()->type != tarray) {
+            W->peek()->type->f(W->peek(), W);
+        }
+    }
+    return n;
+}
 Maybe<Node*> bangfunc(Node* n, Wrap* W) {
-    if (W->peek()->val-- == 2) {
+    if (W->peek()->val-- == 1) {
         W->pull();
         W->peek()->type->f(W->peek(), W);
     }
@@ -260,10 +295,23 @@ Maybe<Node*> execfunc(Node* n, Wrap* W) {return n->f(n, W);}
 Maybe<Node*> addnode(Node* n, Wrap* W) {
     W->pull();
     word w = W->pull()->val+W->pull()->val;
-    W->push()->val = w;
-    return W->peek();
+    W->push(new Node("", tliteral, W->t))->val = w;
+    return n;
+}
+Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
+    W->pull();
+    printf("[\033[31mbreak\033[0m%s]\n", W->t->str().c_str());
+    return n;
 }
 int main() {
+    FILE* FP = fopen("test.qfj", "r");
+    string s;
+    while (!feof(FP)) {s += fgetc(FP);}
+    char c;
+    while ((c = fgetc(FP)) != EOF) {s += c;}
+    s = s.substr(0, s.size()-1);
+    fclose(FP);
+
     (ttype      = new Node("type",      0,     0))->f = typefunc;
     (tnothing   = new Node("nothing",   0,     0))->f = nothingfunc;
     (tstring    = new Node("string",    ttype, 0))->f = stringfunc;
@@ -274,15 +322,16 @@ int main() {
     Node* Global = new Node("Global", tarray, 0);
     Wrap* W = new Wrap(Global, 0);
     W->t->addvar("+", texec)->f = addnode;
-    W->pushscope(W->t->addvar("hi", tliteral));
-    (*W->t)["hi"]->val = 3;
-    (*W->t)["hi"]->addvar("hello", tliteral);
-    (*(*W->t)["hi"])["hello"]->val = 2;
-    Text* t = new Text("1 2 3 4 5 + :\"ok\" ok:\"+\" ok:+", W);
+    W->t->addvar("breakpoint", texec)->f = BREAKPOINT;
+    W->pushscope(W->t->addvar("ok", tliteral));
+    (*W->t)["ok"]->val = 3;
+    (*W->t)["ok"]->addvar("beeb", tliteral)->addvar("sob", tliteral);
+    (*(*W->t)["ok"])["beeb"]->val = 2;
+    Text* t = new Text(s, W);
     Maybe<string> m = t->parse();
     while (m && !t->isempty()) {
         m = t->parse();
-        if (!m) {printf("%s\n", m.str(*t).c_str()); return 1;}
+        if (!m) {printf("%s\n", m.str(s).c_str()); return 1;}
     }
     printf("<%s>\n", W->t->str().c_str());
 }
