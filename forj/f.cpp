@@ -27,8 +27,6 @@ public:
     }
 };
 template <typename T> Maybe<T> Fail(string msg, int i = 0, int l = 0) {return Maybe<T>(msg, i, l);}
-template <typename T> Maybe<T> Success(T val) {return Maybe<T>(val);}
-
 
 template <typename T> class Stack {
 private:
@@ -53,15 +51,26 @@ public:
     bool isempty() {return sp<=-1;}
 };
 
+class Wrap;
+class Node;
+typedef Maybe<Node*>(*func)(Node*, Wrap*);
+Node* ttype;
+Node* tnothing;
+Node* tstring;
+Node* tliteral;
+Node* tarray;
+Node* tbang;
+Node* texec;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
     string name;
     Node* parent;
     Node* type;
     word val;
-    Node(string s, Node* t, Node* p = 0): name(s), type(t), parent(p) {}
+    func f;
+    Node(string s, Node* t, Node* p): name(s), type(t), parent(p) {}
     bool in(string s) {return find(s) != end();}
-    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t);}
+    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t, this);}
     Maybe<Node*> get(string s) {
         if (in(s)) {return (*this)[s];}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
@@ -129,11 +138,11 @@ public:
                 return Fail<int>("Couldn't find any of '" + match + "' in: '" + peek() + "'", idx, peek().size());
             }
         }
-        return Success(i);
+        return i;
     }
     Maybe<char> splitfind(string match, int n = 0) {
         Maybe<int> i = find(match);
-        if (i) {char c = peek()[i.val]; split(i, n); return Success(c);}
+        if (i) {char c = peek()[i.val]; split(i, n); return c;}
         return Fail<char>(i, idx, peek().size());
     }
     bool isnum(char c) {return in("0123456789", c);}
@@ -167,28 +176,33 @@ bool Text::cleanwhitespace() {
     return false;
 }
 Maybe<string> Text::parse() {
-    if (cleanwhitespace()) {return Success(" ");}
+    if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
     t = splitfind(":[]!\"");
     if (!t) {
         string s = peek();
-        if (s == "") {return Success(pull());}
-        if (isnum(s[0])) {W->push()->val = tonum(s); return Success(pull());}
+        if (s == "") {return pull();}
+        if (isnum(s[0])) {W->push()->val = tonum(s); return pull();}
         Maybe<Node*> m = W->search(s);
         if (!m) {return Fail<string>(m, idx, s.size());}
         if (W->searching) {W = W->pullscope(); W->push(m);}
         else {W->push(m);}
-        return Success(pull());
+        return pull();
     }
     string s = pull();
     if (t == '!') {
-        int i = 1;
-        while (peek()[i] == '!') {i++;}
+        int i = 0;
+        while (peek()[++i] == '!');
         split(i);
-        if (i == 1) {/* return execute */}
-        /* push bang predecessor */
+        if (i == 1) {
+            pull();
+            W->peek()->type->f(W->peek(), W);
+        }
+        else {
+            W->push(new Node(peek(), tbang, W->t))->val = i;
+        }
         W->searching = false;
-        return Success(pull());
+        return pull();
     }
     split(1);
     if (t == ':') {
@@ -200,12 +214,11 @@ Maybe<string> Text::parse() {
             W->searching = true;
             W->t = m;
         }
-        // pull();
     }
     else if (t == '[') {
         if (W->searching) {W->searching = false;}
-        else {W = W->pushscope(new Node("", 0));}
-        return Success(pull());
+        else {W = W->pushscope(new Node("", tarray, W->t));}
+        return pull();
     }
     else if (t == ']') {
         Node* n = W->t;
@@ -219,27 +232,53 @@ Maybe<string> Text::parse() {
         split(i, 1);
         s += pull();
         if (W->searching) {
-            W->t->addvar(s, new Node(s, 0, W->t));
+            W->t->addvar(s, tnothing);
             W->searching = false;
-            return Success(pull());
+            return pull();
         }
-        W->push(new Node("", 0));
+        W->push(new Node("", tstring, W->t));
         W->peek()->val = (word) new string(s);
-        return Success(pull());
+        return pull();
     }
-    return Success(pull());
+    return pull();
 }
 
+Maybe<Node*> typefunc(Node* n, Wrap* W) {printf("hi from typefunc\n"); return n;}
+Maybe<Node*> nothingfunc(Node* n, Wrap* W) {printf("hi from nothingfunc\n"); return n;}
+Maybe<Node*> stringfunc(Node* n, Wrap* W) {printf("hi from stringfunc\n"); return n;}
+Maybe<Node*> literalfunc(Node* n, Wrap* W) {printf("hi from literalfunc\n"); return n;}
+Maybe<Node*> arrayfunc(Node* n, Wrap* W) {printf("hi from arrayfunc\n"); return n;}
+Maybe<Node*> bangfunc(Node* n, Wrap* W) {
+    if (W->peek()->val-- == 2) {
+        W->pull();
+        W->peek()->type->f(W->peek(), W);
+    }
+    return W->peek();
+}
+Maybe<Node*> execfunc(Node* n, Wrap* W) {return n->f(n, W);}
+
+Maybe<Node*> addnode(Node* n, Wrap* W) {
+    W->pull();
+    word w = W->pull()->val+W->pull()->val;
+    W->push()->val = w;
+    return W->peek();
+}
 int main() {
-    Node* Global = new Node("Global", 0);
+    (ttype      = new Node("type",      0,     0))->f = typefunc;
+    (tnothing   = new Node("nothing",   0,     0))->f = nothingfunc;
+    (tstring    = new Node("string",    ttype, 0))->f = stringfunc;
+    (tliteral   = new Node("literal",   ttype, 0))->f = literalfunc;
+    (tarray     = new Node("array",     ttype, 0))->f = arrayfunc;
+    (tbang      = new Node("bang",      ttype, 0))->f = bangfunc;
+    (texec      = new Node("exec",      ttype, 0))->f = execfunc;
+    Node* Global = new Node("Global", tarray, 0);
     Wrap* W = new Wrap(Global, 0);
-    W->pushscope(W->t->addvar("hi", 0));
+    W->t->addvar("+", texec)->f = addnode;
+    W->pushscope(W->t->addvar("hi", tliteral));
     (*W->t)["hi"]->val = 3;
-    (*W->t)["hi"]->addvar("hello", 0);
+    (*W->t)["hi"]->addvar("hello", tliteral);
     (*(*W->t)["hi"])["hello"]->val = 2;
-    // W->next->t->addvar("hello");
-    Text* t = new Text(" 123  hi:hello [ hi ] :\"hell\" hell hell \"hi\" 543  ", W);
-    t->print();
+    Text* t = new Text("1 2 3 4 5 + :\"ok\" ok:\"+\" ok:+", W);
     Maybe<string> m = t->parse();
     while (m && !t->isempty()) {
         m = t->parse();
