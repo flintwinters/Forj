@@ -10,7 +10,7 @@ ok:[ beeb :beeb ]
 + + +
 
 :ok
-ok:[ beeb beeb :beeb ] breakpoint!
+ok:[ beeb beeb :beeb :"hello" ] "hi" breakpoint!
 +!+ +
 
 ( this is a comment )
@@ -24,7 +24,7 @@ hi:test
 
 [
     [ ]
-    ok
+    ok:hello
 ]
 1 2 + !
 5 6 + !
@@ -32,7 +32,7 @@ hi:test
 [ 0 2 5 + ]
 [ 0 [ 1 2 + ] !! 2 5 + ] !
 [ 0 2 + 5 + ] !
-ok[[ok]]
+ok[[ok]]ok
 [[]]
 [[1]]
 [1]

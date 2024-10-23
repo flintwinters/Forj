@@ -94,15 +94,9 @@ public:
     }
     string str() {
         return Stack::str([](Node* n)->string{
-            if (n->type == tliteral) {
-                return "\033[90;1m" + to_string(n->val) + "\033[0m";
-            }
-            if (n->type == texec) {
-                return "\033[31m" + to_string(n->val) + "\033[0m";
-            }
-            if (n->type == tstring) {
-                return "\033[32m\"" + *(string*) n->val + "\"\033[0m";
-            }
+            if (n->type == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
+            if (n->type == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
+            if (n->type == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
             if (n->isempty()) {return "<>";}
             if (n->type == tarray) {return " <"+n->str()+"> ";}
             return "<"+to_string(n->val)+">";
@@ -312,11 +306,13 @@ Maybe<Node*> addnode(Node* n, Wrap* W) {
 }
 Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
     W->pull();
-    printf("[\033[31mbreak\033[0m%s]\n", W->t->str().c_str());
+    string s = *(string*) W->pull()->val;
+    printf("[\033[31mBREAK \033[32m%s:\033[0m%s]\n", s.c_str(), W->t->str().c_str());
     return n;
 }
-int main() {
-    FILE* FP = fopen("test.qfj", "r");
+int main(int argc, char** argv) {
+    if (argc != 2) {printf("Provide a filename\n"); return 1;}
+    FILE* FP = fopen(argv[1], "r");
     string s;
     while (!feof(FP)) {s += fgetc(FP);}
     char c;
