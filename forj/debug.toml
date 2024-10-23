@@ -1,0 +1,12 @@
+breakpoints = [
+    "238",
+]
+displays = [
+    "*search",
+    "*S[0]",
+    "*S[0]->t",
+    "*T[0]",
+    "*T[1]",
+    "*scope[0]",
+    "*scope[0]->t",
+]
