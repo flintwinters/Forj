@@ -1,21 +1,26 @@
 breakpoints = [
     "_start",
-    "main",
+    # "main",
+    "pageloop",
     "mtrap",
 ]
 displays = [
     "/x $mstatus",
-    "/i $pc",
+    # "/i $pc",
     "/i $mepc",
     "/x $mcause",
-    "/x $mip",
-    "/x $sip",
+    "/x $a0",
+    "/x $t0",
+    "/x $t1",
+    "/x $t2",
+    "/x $t3",
+    "/x $satp",
     "*0x2004000",
     "*0x200BFF8",
-    "/xb 0x10000000", # uart regs
-    "/xb 0x10000001", # uart regs
-    "/xb 0x10000002", # uart regs
-    "/xb 0x10000003", # uart regs
-    "/xb 0x10000004", # uart regs
-    "/xb 0x10000005"  # uart regs
+    # "/xb 0x10000000", # uart regs
+    # "/xb 0x10000001", # uart regs
+    # "/xb 0x10000002", # uart regs
+    # "/xb 0x10000003", # uart regs
+    # "/xb 0x10000004", # uart regs
+    # "/xb 0x10000005"  # uart regs
 ]

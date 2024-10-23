@@ -4,6 +4,16 @@ all:
 exec:
 	rlwrap pack --extra-args "-q" exec src/Main.idr
 
+fjrun:
+	cd forj && \
+	g++ -g forj.cpp -o forjlang && \
+	./forjlang
+
+fj:
+	cd forj && \
+	g++ -g forj.cpp -o forjlang && \
+	gdb -q ./forjlang -ex "source `pwd`/pyg.py"
+
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
