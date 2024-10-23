@@ -6,6 +6,8 @@
 using namespace std;
 typedef long long word;
 
+// "optional" object implementation
+// Stores either the T value, or an error message.
 template <typename T> class Maybe : public string {
 public:
     T val;
@@ -26,8 +28,10 @@ public:
         return "\033[33;1m<" + to_string(i) + ">: " + (*this) + "\033[0m\n" + s + "\033[0m";
     }
 };
+// Shorthand to build a failed Maybe
 template <typename T> Maybe<T> Fail(string msg, int i = 0, int l = 0) {return Maybe<T>(msg, i, l);}
 
+// Quintessential stack datastructure
 template <typename T> class Stack {
 private:
     vector<T> s;
@@ -54,6 +58,8 @@ public:
 class Wrap;
 class Node;
 typedef Maybe<Node*>(*func)(Node*, Wrap*);
+// Prim types.
+// Want to replace these in-lang eventually
 Node* ttype;
 Node* tnothing;
 Node* tstring;
@@ -61,6 +67,8 @@ Node* tliteral;
 Node* tarray;
 Node* tbang;
 Node* texec;
+// Tree-like datastructure.
+// Nodes track variable names, and have their own stacks.
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
     string name;
@@ -101,6 +109,8 @@ public:
         });
     }
 };
+// "Thread" of execution
+// tracks the path of the current scope
 class Wrap {
 public:
     Node* t;
@@ -126,6 +136,7 @@ public:
     Node* pull() {return t->pull();}
 };
 
+// Parser class
 class Text : public Stack<string> {
 public:
     int idx = 0;
@@ -269,6 +280,7 @@ Maybe<string> Text::parse() {
     return pull();
 }
 
+// functions to be executed when bang is called on a type
 Maybe<Node*> typefunc(Node* n, Wrap* W) {printf("hi from typefunc\n"); return n;}
 Maybe<Node*> nothingfunc(Node* n, Wrap* W) {printf("hi from nothingfunc\n"); return n;}
 Maybe<Node*> stringfunc(Node* n, Wrap* W) {printf("hi from stringfunc\n"); return n;}
