@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <stdio.h>
 #include <map>
 #include <string>
@@ -69,6 +70,7 @@ Node* tbang;
 Node* texec;
 // Tree-like datastructure.
 // Nodes track variable names, and have their own stacks.
+vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
     string name;
@@ -77,8 +79,13 @@ public:
     word val = 0;
     func f;
     Node(string s, Node* t, Node* p): name(s), type(t), parent(p) {}
+    static Node* New(string s, Node* t, Node* p) {
+        allnodes.push_back(new Node(s, t, p));
+        return allnodes.back();
+    }
+    static void deleteall() {for (Node* n : allnodes) {delete n;}}
     bool in(string s) {return find(s) != end();}
-    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t, this);}
+    Node* addvar(string s, Node* t) {return (*this)[s] = Node::New(s, t, this);}
     Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
@@ -208,7 +215,7 @@ string Text::capture(string close) {
 Maybe<string> Text::final(string s) {
     if (s == "") {return peek();}
     if (isnum(s[0])) {
-        W->push(new Node(s, tliteral, W->t))->val = tonum(s);
+        W->push(Node::New(s, tliteral, W->t))->val = tonum(s);
         return peek();
     }
     Maybe<Node*> m = W->search(s);
@@ -246,7 +253,7 @@ Maybe<string> Text::parse() {
         while (peek()[i] == '!') {i++;}
         split(i);
         pull();
-        if (i) {W->push(new Node(peek(), tbang, W->t))->val = i;}
+        if (i) {W->push(Node::New(peek(), tbang, W->t))->val = i;}
         else {W->peek()->type->f(W->peek(), W);}
         W->searching = false;
         return s;
@@ -254,7 +261,7 @@ Maybe<string> Text::parse() {
     else if (t == '[') {
         Node* n = W->t;
         if (W->searching) {W = W->pullscope()->pushscope(n);}
-        else {W = W->pushscope(new Node("", tarray, n));}
+        else {W = W->pushscope(Node::New("", tarray, n));}
     }
     else if (t == ']') {
         Node* n = W->t;
@@ -267,7 +274,7 @@ Maybe<string> Text::parse() {
             W = W->pullscope();
             return pull();
         }
-        W->push(new Node("", tstring, 0))->val = (word) new string(str);
+        W->push(Node::New("", tstring, 0))->val = (word) new string(str);
         return str;
     }
     else if (t == '(') {return capture(")");}
@@ -301,7 +308,7 @@ Maybe<Node*> execfunc(Node* n, Wrap* W) {return n->f(n, W);}
 Maybe<Node*> addnode(Node* n, Wrap* W) {
     W->pull();
     word w = W->pull()->val+W->pull()->val;
-    W->push(new Node("", tliteral, W->t))->val = w;
+    W->push(Node::New("", tliteral, W->t))->val = w;
     return n;
 }
 Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
@@ -310,6 +317,30 @@ Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
     printf("[\033[31mBREAK \033[32m%s:\033[0m%s]\n", s.c_str(), W->t->str().c_str());
     return n;
 }
+Maybe<Node*> loadfile(Node* n, Wrap* W) {
+    W->pull();
+    Node* str = W->peek();
+    FILE* FP = fopen(((string*) str->val)->c_str(), "r");
+    string s;
+    while (!feof(FP)) {s += fgetc(FP);}
+    char c;
+    while ((c = fgetc(FP)) != EOF) {s += c;}
+    fclose(FP);
+    s = s.substr(0, s.size()-1);
+    delete (string*) str->val;
+    str->val = (word) new string(s);
+    return W->peek();
+}
+Maybe<Node*> savefile(Node* n, Wrap* W) {
+    W->pull();
+    string* str = (string*) W->pull()->val;
+    FILE* FP = fopen(str->c_str(), "w");
+    delete str;
+    str = (string*) W->pull()->val;
+    fwrite(str->c_str(), str->size(), 1, FP);
+    delete str;
+    return W->peek();
+}
 int main(int argc, char** argv) {
     if (argc != 2) {printf("Provide a filename\n"); return 1;}
     FILE* FP = fopen(argv[1], "r");
@@ -317,29 +348,34 @@ int main(int argc, char** argv) {
     while (!feof(FP)) {s += fgetc(FP);}
     char c;
     while ((c = fgetc(FP)) != EOF) {s += c;}
-    s = s.substr(0, s.size()-1);
     fclose(FP);
+    s = s.substr(0, s.size()-1);
 
-    (ttype      = new Node("type",      0,     0))->f = typefunc;
-    (tnothing   = new Node("nothing",   0,     0))->f = nothingfunc;
-    (tstring    = new Node("string",    ttype, 0))->f = stringfunc;
-    (tliteral   = new Node("literal",   ttype, 0))->f = literalfunc;
-    (tarray     = new Node("array",     ttype, 0))->f = arrayfunc;
-    (tbang      = new Node("bang",      ttype, 0))->f = bangfunc;
-    (texec      = new Node("exec",      ttype, 0))->f = execfunc;
-    Node* Global = new Node("Global", tarray, 0);
+    (ttype      = Node::New("type",      0,     0))->f = typefunc;
+    (tnothing   = Node::New("nothing",   0,     0))->f = nothingfunc;
+    (tstring    = Node::New("string",    ttype, 0))->f = stringfunc;
+    (tliteral   = Node::New("literal",   ttype, 0))->f = literalfunc;
+    (tarray     = Node::New("array",     ttype, 0))->f = arrayfunc;
+    (tbang      = Node::New("bang",      ttype, 0))->f = bangfunc;
+    (texec      = Node::New("exec",      ttype, 0))->f = execfunc;
+    Node* Global = Node::New("Global", tarray, 0);
     Wrap* W = new Wrap(Global, 0);
     W->t->addvar("+", texec)->f = addnode;
     W->t->addvar("breakpoint", texec)->f = BREAKPOINT;
+    W->t->addvar("loadfile", texec)->f = loadfile;
+    W->t->addvar("savefile", texec)->f = savefile;
     W->pushscope(W->t->addvar("ok", tliteral));
     (*W->t)["ok"]->val = 3;
     (*W->t)["ok"]->addvar("beeb", tliteral)->addvar("sob", tliteral);
     (*(*W->t)["ok"])["beeb"]->val = 2;
-    Text* t = new Text(s, W);
-    Maybe<string> m = t->parse();
-    while (m && !t->isempty()) {
-        m = t->parse();
+    Text* T = new Text(s, W);
+    Maybe<string> m = T->parse();
+    while (m && !T->isempty()) {
+        m = T->parse();
         if (!m) {printf("%s\n", m.str(s).c_str()); return 1;}
     }
     printf("<%s>\n", W->t->str().c_str());
+    Node::deleteall();
+    delete T;
+    delete W;
 }

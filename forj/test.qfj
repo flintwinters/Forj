@@ -10,8 +10,12 @@ ok:[ beeb :beeb ]
 + + +
 
 :ok
-ok:[ beeb beeb :beeb :"hello" ] "hi" breakpoint!
+ok:[ beeb beeb :beeb :"hello" ]
+"hi" breakpoint!
 +!+ +
+
+("test.qfj" loadfile!)
+("hello.qfj" savefile!)
 
 ( this is a comment )
 (another comment)
