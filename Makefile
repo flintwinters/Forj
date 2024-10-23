@@ -1,8 +1,8 @@
-all:
-	rlwrap pack --extra-args "-q" repl src/Main.idr
+# all:
+# 	rlwrap pack --extra-args "-q" repl src/Main.idr
 
-exec:
-	rlwrap pack --extra-args "-q" exec src/Main.idr
+# exec:
+# 	rlwrap pack --extra-args "-q" exec src/Main.idr
 
 fjrun:
 	cd forj && \
@@ -17,7 +17,7 @@ fj:
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
-rv:
+all:
 	cd rv64 && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
