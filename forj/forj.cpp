@@ -11,9 +11,9 @@ typedef long long word;
 // Stores either the T value, or an error message.
 template <typename T> class Maybe : public string {
 public:
-    T val;
-    int i = -1;
-    int l = 0;
+    T val; // literal value of the Maybe
+    int i = -1; // index of the error in the file
+    int l = 0;  // length of the problem token
     bool success = false;
     Maybe(T val): val(val), success(true) {}
     Maybe(string s, int i, int l): string(s), i(i), l(l) {}
@@ -21,6 +21,7 @@ public:
     operator bool() {return success;}
     operator T() {return val;}
     bool operator==(T v) {return val == v;}
+    // append to the error message.
     Maybe<T> addmsg(string s) {return Maybe<T>((*this)+(s), i, l);}
     string str() {return "<" + to_string(i) + ">: " + (*this);}
     string str(string s) {
@@ -37,13 +38,14 @@ template <typename T> class Stack {
 private:
     vector<T> s;
 protected:
+    // function to convert T to string
     string str(string (tostr)(T)) {
         string s = " ";
         for (int i = 0; i <= sp; i++) {s += tostr(peek(i)) + " ";}
         return s;
     }
 public:
-    int sp = -1;
+    int sp = -1; // stack pointer
     Stack() {}
     T pull() {return s[sp--];}
     T push(T t) {
@@ -58,6 +60,7 @@ public:
 
 class Wrap;
 class Node;
+// function type for execution of nodes.
 typedef Maybe<Node*>(*func)(Node*, Wrap*);
 // Prim types.
 // Want to replace these in-lang eventually
@@ -68,8 +71,8 @@ Node* tliteral;
 Node* tarray;
 Node* tbang;
 Node* texec;
-// Tree-like datastructure.
-// Nodes track variable names, and have their own stacks.
+// Tree datastructure.
+// Nodes track variable names, and have their own optional stacks.
 vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
@@ -77,19 +80,23 @@ public:
     Node* parent;
     Node* type;
     word val = 0;
-    func f;
+    func f; // executable function
     Node(string s, Node* t, Node* p): name(s), type(t), parent(p) {}
+    // Create a new node, adding it to the vect so it can be deleted later
     static Node* New(string s, Node* t, Node* p) {
         allnodes.push_back(new Node(s, t, p));
         return allnodes.back();
     }
+    // Delete all nodes created with `New`
     static void deleteall() {for (Node* n : allnodes) {delete n;}}
+    // If the variable `s` exists
     bool in(string s) {return find(s) != end();}
     Node* addvar(string s, Node* t) {return (*this)[s] = Node::New(s, t, this);}
     Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
+    // Search all parents for `s`
     Maybe<Node*> global(string s) {
         if (in(s)) {return (*this)[s];}
         if (parent) {
@@ -114,12 +121,15 @@ public:
 // tracks the path of the current scope
 class Wrap {
 public:
-    Node* t;
+    Node* t; // Current node
+    // Are we currently searching, ie `a:b:c`
     bool searching = false;
     Wrap* prev, *next;
     Wrap(Node* t, Wrap* p, Wrap* n = 0): t(t), prev(p), next(n) {}
+    // Move to a scope, ie: hello:[]
     Wrap* pushscope(Node* node) {return next = new Wrap(node, this);}
     Wrap* pullscope() {Wrap* w = prev; w->next = next; delete this; return w;}
+    
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->global(s);
         if (m) {return m;}
@@ -132,6 +142,7 @@ public:
         return 1;
     }
 
+    // Pass functions to the current node
     Node* peek(int i = 0) {return t->peek(i);}
     Node* push(Node* n) {return t->push(n);}
     Node* pull() {return t->pull();}
