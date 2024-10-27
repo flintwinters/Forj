@@ -1,19 +1,3 @@
-# all:
-# 	rlwrap pack --extra-args "-q" repl src/Main.idr
-
-# exec:
-# 	rlwrap pack --extra-args "-q" exec src/Main.idr
-
-fjrun:
-	cd forj && \
-	g++ -g forj.cpp -o forjlang && \
-	./forjlang test.qfj
-
-fj:
-	cd forj && \
-	g++ -g forj.cpp -o forjlang && \
-	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang test.qfj 
-
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
@@ -42,6 +26,16 @@ all:
 	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
 	)
 	pkill -f qemu-system-riscv64
+
+fjrun:
+	cd forj && \
+	g++ -g main.cpp -o forjlang && \
+	./forjlang test.qfj
+
+fj:
+	cd forj && \
+	g++ -g main.cpp -o forjlang && \
+	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang test.qfj 
 
 asm:
 	cd rv64 && \

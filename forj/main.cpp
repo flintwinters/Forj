@@ -36,7 +36,11 @@ string Node::str() {
 // functions to be executed when bang is called on a type
 Maybe<Node*> typefunc(Node* n, Wrap* W) {printf("hi from typefunc\n"); return n;}
 Maybe<Node*> nothingfunc(Node* n, Wrap* W) {printf("hi from nothingfunc\n"); return n;}
-Maybe<Node*> stringfunc(Node* n, Wrap* W) {printf("hi from stringfunc\n"); return n;}
+Maybe<Node*> stringfunc(Node* n, Wrap* W) {
+    string s = *(string*) W->pull()->val;
+    printf("%s\n", s.c_str());
+    return n;
+}
 Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
 Maybe<Node*> bangfunc(Node* n, Wrap* W) {
     if (W->peek()->val-- == 1) {
@@ -167,6 +171,12 @@ Maybe<Node*> includefile(Node* n, Wrap* W) {
     }
     return n;
 }
+Maybe<Node*> runsystem(Node* n, Wrap* W) {
+    W->pull();
+    string* str = (string*) W->pull()->val;
+    system(str->c_str());
+    return n;
+}
 int main(int argc, char** argv) {
     if (argc != 2) {printf("Provide a filename\n"); return 1;}
     FILE* FP = fopen(argv[1], "r");
@@ -178,7 +188,7 @@ int main(int argc, char** argv) {
     s = s.substr(0, s.size()-1);
 
     (ttype      = Node::New("type",      0,     0))->f = typefunc;
-    (tnothing   = Node::New("nothing",   0,     0))->f = nothingfunc;
+    (tnothing   = Node::New("nothing",   ttype, 0))->f = nothingfunc;
     (tstring    = Node::New("string",    ttype, 0))->f = stringfunc;
     (tliteral   = Node::New("literal",   ttype, 0))->f = literalfunc;
     (tarray     = Node::New("array",     ttype, 0))->f = arrayfunc;
@@ -198,6 +208,7 @@ int main(int argc, char** argv) {
     W->t->addvar("?",           texec)->f = execif;
     W->t->addvar(".",           texec)->f = dupnode;
     W->t->addvar("+",           texec)->f = addnode;
+    W->t->addvar("system", texec)->f = runsystem;
     W->pushscope(W->t->addvar("ok", tliteral));
     (*W->t)["ok"]->val = 3;
     (*W->t)["ok"]->addvar("beeb", tliteral)->addvar("sob", tliteral);
@@ -212,5 +223,10 @@ int main(int argc, char** argv) {
     printf("\033[0m%s\n", W->t->str().c_str());
     Node::deleteall();
     delete T;
-    delete W;
+    Wrap* w = W;
+    while (W) {
+        w = w->prev;
+        delete w;
+        W = w;
+    }
 }
