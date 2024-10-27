@@ -13,21 +13,17 @@ template <typename T> class Maybe : public string {
 public:
     T val;
     int i = -1;
-    int l = 0;
+    int len = 0;
     bool success = false;
     Maybe(T val): val(val), success(true) {}
-    Maybe(string s, int i, int l): string(s), i(i), l(l) {}
+    Maybe(string s, int i, int l): string(s), i(i), len(l) {}
     T operator->() {return val;}
     operator bool() {return success;}
     operator T() {return val;}
     bool operator==(T v) {return val == v;}
-    Maybe<T> addmsg(string s) {return Maybe<T>((*this)+(s), i, l);}
+    Maybe<T> addmsg(string s) {return Maybe<T>((*this)+(s), i, len);}
     string str() {return "<" + to_string(i) + ">: " + (*this);}
-    string str(string s) {
-        if (l) {s.insert(i+l, "\033[0m");}
-        s.insert(i, "\033[31;1;4m!>>>>>");
-        return "\033[33;1m<" + to_string(i) + ">: " + (*this) + "\033[0m\n" + s + "\033[0m";
-    }
+    string str(string s);
 };
 // Shorthand to build a failed Maybe
 template <typename T> Maybe<T> Fail(string msg, int i = 0, int l = 0) {return Maybe<T>(msg, i, l);}
@@ -36,12 +32,6 @@ template <typename T> Maybe<T> Fail(string msg, int i = 0, int l = 0) {return Ma
 template <typename T> class Stack {
 private:
     vector<T> s;
-protected:
-    string str(string (tostr)(T)) {
-        string s = " ";
-        for (int i = 0; i <= sp; i++) {s += tostr(peek(i)) + " ";}
-        return s;
-    }
 public:
     int sp = -1;
     Stack() {}
@@ -54,6 +44,7 @@ public:
     }
     T peek(int i = 0) {return s[sp-i];}
     bool isempty() {return sp<=-1;}
+    string str(string (tostr)(T));
 };
 
 class Wrap;
@@ -99,16 +90,7 @@ public:
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
-    string str() {
-        return Stack::str([](Node* n)->string{
-            if (n->type == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
-            if (n->type == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
-            if (n->type == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
-            if (n->isempty()) {return "<>";}
-            if (n->type == tarray) {return " <"+n->str()+"> ";}
-            return "<"+to_string(n->val)+">";
-        });
-    }
+    string str();
 };
 // "Thread" of execution
 // tracks the path of the current scope
@@ -224,6 +206,7 @@ Maybe<string> Text::final(string s) {
     else {W->push(m);}
     return peek();
 }
+Maybe<Node*> arrayfunc(Node* n, Wrap* W);
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
