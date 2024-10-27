@@ -64,6 +64,12 @@ Maybe<Node*> savefile(Node* n, Wrap* W) {
     delete str;
     return W->peek();
 }
+Maybe<Node*> runsystem(Node* n, Wrap* W) {
+    W->pull();
+    string* str = (string*) W->pull()->val;
+    system(str->c_str());
+    return n;
+}
 int main(int argc, char** argv) {
     if (argc != 2) {printf("Provide a filename\n"); return 1;}
     FILE* FP = fopen(argv[1], "r");
@@ -84,6 +90,7 @@ int main(int argc, char** argv) {
     Node* Global = Node::New("Global", tarray, 0);
     Wrap* W = new Wrap(Global, 0);
     W->t->addvar("+", texec)->f = addnode;
+    W->t->addvar("system", texec)->f = runsystem;
     W->t->addvar("breakpoint", texec)->f = BREAKPOINT;
     W->t->addvar("loadfile", texec)->f = loadfile;
     W->t->addvar("savefile", texec)->f = savefile;

@@ -129,7 +129,7 @@ public:
     // Move to a scope, ie: hello:[]
     Wrap* pushscope(Node* node) {return next = new Wrap(node, this);}
     Wrap* pullscope() {Wrap* w = prev; w->next = next; delete this; return w;}
-    
+
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->global(s);
         if (m) {return m;}
@@ -155,10 +155,12 @@ public:
     Wrap* W = 0;
     Stack<string> U;
     Text(string s, Wrap* w): W(w) {push(s);}
+    // pull a token
     string pull() {
         idx += peek().size();
         return U.push(Stack::pull());
     }
+    // split the top token at i
     string split(int i, int n = 0) {
         string s = Stack::pull();
         push(s.substr(i+n));
@@ -166,6 +168,7 @@ public:
         idx += n;
         return peek();
     }
+    // maybe find the first index of a char in match
     Maybe<int> find(string match) {
         if (!peek().size()) {return Fail<int>("Couldn't find in empty string", idx, peek().size());}
         int i = 0;
@@ -176,6 +179,7 @@ public:
         }
         return i;
     }
+    // maybe find and split at the first match
     Maybe<char> splitfind(string match, int n = 0) {
         Maybe<int> i = find(match);
         if (i) {char c = peek()[i.val]; split(i, n); return c;}
