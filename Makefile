@@ -16,7 +16,6 @@ all:
 	( \
 	qemu-system-riscv64 \
 		-s -S \
-<<<<<<< HEAD
 		-machine virt \
 		-cpu rv64 \
 		-nographic \
@@ -41,14 +40,11 @@ rv:
 		-lgcc && \
 	( \
 	qemu-system-riscv64 \
-=======
->>>>>>> Paging
 		-machine virt \
 		-cpu rv64 \
 		-nographic \
 		-serial mon:stdio \
 		-bios none \
-<<<<<<< HEAD
 		-kernel forjos \
 	)
 
@@ -67,12 +63,6 @@ fj:
 	cd forj && \
 	g++ -g main.cpp -o forjlang && \
 	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang test.qfj 
-=======
-		-kernel forjos & \
-	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
-	)
-	pkill -f qemu-system-riscv64
->>>>>>> Paging
 
 asm:
 	cd rv64 && \
