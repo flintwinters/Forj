@@ -12,7 +12,6 @@ all:
 		-static \
 		-nostdlib \
 		setup.o \
-		outmain.o \
 		-lgcc && \
 	( \
 	qemu-system-riscv64 \
@@ -26,6 +25,28 @@ all:
 	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
 	)
 	pkill -f qemu-system-riscv64
+
+rv:
+	cd rv64 && \
+	riscv64-unknown-elf-as setup.s -o setup.o &&\
+	riscv64-unknown-elf-gcc -T \
+		linker.ld \
+		-o forjos \
+		-ffreestanding \
+		-O0 \
+		-static \
+		-nostdlib \
+		setup.o \
+		-lgcc && \
+	( \
+	qemu-system-riscv64 \
+		-machine virt \
+		-cpu rv64 \
+		-nographic \
+		-serial mon:stdio \
+		-bios none \
+		-kernel forjos \
+	)
 
 fjrun:
 	cd forj && \
@@ -49,6 +70,3 @@ push:
 	git add -u
 	git commit -m "$(msg)"
 	git push
-
-clean:
-	rm -rf build

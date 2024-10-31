@@ -5,14 +5,11 @@
 # https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/
 # https://riscv.org/wp-content/uploads/2016/07/Tue0900_RISCV-20160712-Interrupts.pdf
 
-.section .text.init
-
-.global _start
 .option norvc
 .section .data
 .section .text.init
-.global _start
 
+.global _start
 _start:
 # priv-isa-asciidoc_20240411.pdf
 # 10.4.1: Addressing and Memory Protection Sv39
@@ -43,9 +40,9 @@ _start:
     sd      t0, 0(t1)
 
 
-	# delegate m interrupts to s
-    li      t0, 0x20
-    csrs    mideleg, t0
+	# # delegate m interrupts to s
+    # li      t0, 0x20
+    # csrs    mideleg, t0
 
 	# set trap handler location
     la      t0, mtrap
@@ -61,11 +58,14 @@ _start:
     csrs    mie, t0
 
 	# set supervisor kernel location
-	la      t0, main
+	la      t0, enterkernel
   	csrw    mepc, t0
 	li      t0, 0x80
     csrc    mip, t0
     mret
+
+enterkernel:
+	j main
 
 mtrap:
 #

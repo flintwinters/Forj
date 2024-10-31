@@ -1,7 +1,7 @@
 breakpoints = [
     "_start",
-    # "main",
-    "pageloop",
+    "main",
+    # "pageloop",
     "mtrap",
 ]
 displays = [
@@ -9,6 +9,7 @@ displays = [
     # "/i $pc",
     "/i $mepc",
     "/x $mcause",
+    "/x $scause",
     "/x $a0",
     "/x $t0",
     "/x $t1",
