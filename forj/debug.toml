@@ -1,8 +1,13 @@
 breakpoints = [
-    "BREAKPOINT",
-    "forj.cpp:265",
+    # "BREAKPOINT",
+    # "errorexit",
+    "8",
+    # "forj.cpp:265",
     # "225",
     # "forj.cpp:95",
 ]
 displays = [
+    "idx",
+    "lines",
+    "i",
 ]

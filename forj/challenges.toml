@@ -42,9 +42,13 @@ result = "[]"
 challenge = ":\"hi\" [[hi]]!"
 result = "[ [] ]"
 
-[depthvar]
-challenge = ":\"hi\" hi:[ :\"test\" 1 2 3 4 5 6 ] hi:test"
-result = "[ 1 2 3 4 5 6 ] []"
+[depthvar1]
+challenge = ":\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ] hi:test"
+result = "[] [ 6 5 4 3 2 1 ]"
+
+[depthvar2]
+challenge = """:\"hi\" hi:[ 1 2 3 4 5 6 ] hi"""
+result = "[ 6 5 4 3 2 1 ] [ 6 5 4 3 2 1 ]"
 
 [internalbreak]
 challenge = "1 2 3 [4 5 breakpoint!]"

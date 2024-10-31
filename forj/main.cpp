@@ -4,16 +4,17 @@
 template <typename T> string Maybe<T>::str(string s) {
     int idx = 0;
     vector<int> lines;
-    while (idx != npos) {
+    lines.push_back(idx);
+    while (idx <= i && s.find("\n", idx) != npos) {
         lines.push_back(idx);
-        if (idx > i) {break;}
         idx = s.find("\n", idx)+1;
     }
-    if (len) {s.insert(idx, "\033[0m");}
-    s.insert(idx-len-1, "\033[31;1;4m!>>>>>");
+    int escapelen = string("\033[31;1;4m!>>>>>").length();
+    if (len) {s.insert(i+len, "\033[0m"); escapelen += string("\033[0m").length();}
+    s.insert(max(0, i), "\033[31;1;4m!>>>>>");
     return
-        "\033[33;1m<" + to_string(lines.size()) + ":" + to_string(idx) + ">:" +
-        (*this) + "\033[0m\n" + s.substr(lines[max((int) lines.size()-5, 0)], idx) + "\033[0m";
+        "\033[33;1m<" + to_string(lines.size()) + ":" + to_string(i) + ">:" +
+        (*this) + "\033[0m\n" + s.substr(lines[max((int) lines.size()-5, 0)], i+len+escapelen) + "\033[0m";
 }
 
 template <typename T> string Stack<T>::str(string (tostr)(T)) {
@@ -29,7 +30,7 @@ string Node::str() {
         if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
         if (n->isempty()) {return "[]";}
         if (n->gettype() == tarray) {return " ["+n->str()+"] ";}
-        return "["+to_string(n->val)+"]";
+        return "["+n->str()+"]";
     });
 }
 
@@ -180,6 +181,10 @@ Maybe<Node*> fjpush(Node* n, Wrap* W) {
     W->push(W->peek(W->pull()->val));
     return n;
 }
+int errorexit(Maybe<string> m, string s) {
+    printf("%s\n", m.str(s).c_str());
+    return 1;
+}
 int main(int argc, char** argv) {
     if (argc != 2) {printf("Provide a filename\n"); return 1;}
     FILE* FP = fopen(argv[1], "r");
@@ -222,7 +227,9 @@ int main(int argc, char** argv) {
     Maybe<string> m = T->parse();
     while (m && !T->isempty()) {
         m = T->parse();
-        if (!m) {printf("%s\n", m.str(s).c_str()); return 1;}
+        if (!m) {
+            return errorexit(m, s);
+        }
     }
     printf("\033[0m%s\n", W->t->str().c_str());
     Node::deleteall();

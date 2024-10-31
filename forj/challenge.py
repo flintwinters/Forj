@@ -21,20 +21,25 @@ def runforj(v):
         if r != st:
             return "expected:\n"+v["result"]+"\nactual:\n"+s
 
-failed = False
-if len(argv) > 1:
-    s = runforj(T[argv[1]])
-    if s:
-        fail(argv[1], s)
-        failed = True
-    exit(1)
-else:
-    for k, v in T.items():
-        s = runforj(v)
-        if s:
-            fail(k, s)
-            failed = True
-            
+def main():
+    ret = 0
+    if len(argv) > 1:
+        with open("challenge", "w") as f:
+            f.write(T[argv[1]]["challenge"]+" ")
+        # system("forjlang challenge > challengeresult")
+        ret = 1
+    else:
+        failed = False
+        for k, v in T.items():
+            s = runforj(v)
+            if s:
+                fail(k, s)
+                failed = True
 
-if not failed:
-    print("\033[92;1mall pass "+"─"*30+"\033[0m")
+        if not failed:
+            print("\033[92;1mall pass "+"─"*30+"\033[0m")
+        system("rm challenge")
+        system("rm challengeresult")
+    return ret
+
+exit(main())
