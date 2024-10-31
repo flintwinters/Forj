@@ -44,6 +44,11 @@ public:
         return t;
     }
     T peek(int i = 0) {return s[sp-i];}
+    void swapi(int i = 0) {
+        T b = peek(i);
+        s[sp-i] = peek();
+        s[sp] = b;
+    }
     bool isempty() {return sp<=-1;}
     string str(string (tostr)(T));
 };
@@ -67,11 +72,13 @@ vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
     string name;
+    vector<Node*> implicit;
     Node* parent;
-    Node* type;
     word val = 0;
     func f; // executable function
-    Node(string s, Node* t, Node* p): name(s), type(t), parent(p) {}
+    Node(string s, Node* t, Node* p): name(s), parent(p) {
+        implicit.push_back(t);
+    }
     // Create a new node, adding it to the vect so it can be deleted later
     static Node* New(string s, Node* t, Node* p) {
         allnodes.push_back(new Node(s, t, p));
@@ -84,7 +91,18 @@ public:
     Node* addvar(string s, Node* t) {return (*this)[s] = Node::New(s, t, this);}
     Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
+        for (Node* n : implicit) {
+            if (!n) {continue;}
+            Maybe<Node*> m = n->getvar(s);
+            if (m) {return m;}
+        }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
+    }
+    Node* gettype() {
+        return implicit.back();
+        // Maybe<Node*> m = getvar("type");
+        // if (m) {return m;}
+        // return tnothing;
     }
     // Search all parents for `s`
     Maybe<Node*> global(string s) {
@@ -231,8 +249,8 @@ Maybe<string> Text::parse() {
         return m;
     }
     string s = pull();
+    split(1);
     if (t == ':') {
-        split(1);
         if (s == "") {W = W->pushscope(W->t);}
         else {
             Maybe<Node*> m = W->search(s);
@@ -242,16 +260,15 @@ Maybe<string> Text::parse() {
         }
         W->searching = true;
     }
-    split(1);
     if (s != "") {final(s);}
     if (t == '!') {
-        pull(); pull();
-        int i = 0;
-        while (peek()[i] == '!') {i++;}
+        pull(); 
+        int i = -1;
+        while (peek()[++i] == '!');
         split(i);
         pull();
         if (i) {W->push(Node::New(peek(), tbang, W->t))->val = i;}
-        else {W->peek()->type->f(W->peek(), W);}
+        else {W->peek()->gettype()->f(W->peek(), W);}
         W->searching = false;
         return s;
     }

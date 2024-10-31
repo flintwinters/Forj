@@ -24,11 +24,11 @@ template <typename T> string Stack<T>::str(string (tostr)(T)) {
 
 string Node::str() {
     return Stack::str([](Node* n)->string{
-        if (n->type == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
-        if (n->type == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
-        if (n->type == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
+        if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
+        if (n->gettype() == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
+        if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
         if (n->isempty()) {return "[]";}
-        if (n->type == tarray) {return " ["+n->str()+"] ";}
+        if (n->gettype() == tarray) {return " ["+n->str()+"] ";}
         return "["+to_string(n->val)+"]";
     });
 }
@@ -45,7 +45,7 @@ Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
 Maybe<Node*> bangfunc(Node* n, Wrap* W) {
     if (W->peek()->val-- == 1) {
         W->pull();
-        W->peek()->type->f(W->peek(), W);
+        W->peek()->gettype()->f(W->peek(), W);
     }
     return n;
 }
@@ -54,8 +54,8 @@ Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
     W->pull();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
-        if (W->peek()->type != tarray) {
-            W->peek()->type->f(W->peek(), W);
+        if (W->peek()->gettype() != tarray) {
+            W->peek()->gettype()->f(W->peek(), W);
         }
     }
     return n;
@@ -68,7 +68,7 @@ Maybe<Node*> addnode(Node* n, Wrap* W) {
 }
 Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
     W->pull();
-    if (W->peek()->type == tstring) {
+    if (W->peek()->gettype() == tstring) {
         string s = *(string*) W->pull()->val;
         printf("[\033[31mBREAK \033[35;1m%s\033[0m:%s]\n", s.c_str(), W->t->str().c_str());
         return n;
@@ -121,31 +121,24 @@ Maybe<Node*> splitat(Node* n, Wrap* W) {
 }
 Maybe<Node*> swapnode(Node* n, Wrap* W) {
     W->pull();
-    Node* a = W->pull();
-    Node* b = W->pull();
-    W->push(a); W->push(b);
+    word a = W->pull()->val;
+    W->t->swapi(a);
     return n;
 }
 Maybe<Node*> execif(Node* n, Wrap* W) {
     W->pull();
     if (W->peek(1)->val != 0) {
-        Node* n = W->pull();
-        n->type->f(n, W);
-        return W->pull();
+        n = W->pull();
+        n->gettype()->f(n, W);
     }
-    W->pull();
-    return n;
-}
-Maybe<Node*> dupnode(Node* n, Wrap* W) {
-    W->pull();
-    W->push(W->peek());
+    else {W->pull(); W->pull();}
     return n;
 }
 Maybe<Node*> stringconcat(Node* n, Wrap* W) {
     W->pull();
     string* a = (string*) W->pull()->val;
     string* b = (string*) W->peek()->val;
-    W->peek()->val = (word) new string(*a+*b);
+    W->peek()->val = (word) new string(*b+*a);
     delete a;
     delete b;
     return n;
@@ -177,6 +170,16 @@ Maybe<Node*> runsystem(Node* n, Wrap* W) {
     system(str->c_str());
     return n;
 }
+Maybe<Node*> fjpull(Node* n, Wrap* W) {
+    W->pull();
+    W->pull();
+    return n;
+}
+Maybe<Node*> fjpush(Node* n, Wrap* W) {
+    W->pull();
+    W->push(W->peek(W->pull()->val));
+    return n;
+}
 int main(int argc, char** argv) {
     if (argc != 2) {printf("Provide a filename\n"); return 1;}
     FILE* FP = fopen(argv[1], "r");
@@ -206,9 +209,10 @@ int main(int argc, char** argv) {
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("?",           texec)->f = execif;
-    W->t->addvar(".",           texec)->f = dupnode;
     W->t->addvar("+",           texec)->f = addnode;
-    W->t->addvar("system", texec)->f = runsystem;
+    W->t->addvar("system",      texec)->f = runsystem;
+    W->t->addvar("pull",        texec)->f = fjpull;
+    W->t->addvar("push",        texec)->f = fjpush;
     W->pushscope(W->t->addvar("ok", tliteral));
     (*W->t)["ok"]->val = 3;
     (*W->t)["ok"]->addvar("beeb", tliteral)->addvar("sob", tliteral);

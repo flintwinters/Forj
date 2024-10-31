@@ -1,0 +1,60 @@
+[basic]
+challenge = "0 1 2"
+result = "2 1 0"
+
+[addfunc]
+challenge = "1 4 +"
+result = "0 4 1"
+
+[add]
+challenge = "1 2 +!"
+result = "3"
+
+[arradd]
+challenge = "[1 2 +] !"
+result = "3"
+
+[execiftrue]
+challenge = "1 [4 5 6 +] ?!"
+result = "11 4"
+
+[execiffalse]
+challenge = "0 [4 5 6 +] ?!"
+result = ""
+
+[string]
+challenge = "\"hello\""
+result = "\"hello\""
+
+[concat]
+challenge = "\"hello\" \"hi\" concat!"
+result = "\"hellohi\""
+
+[comments]
+challenge = "\"hello\" (comment test) \"hi\" concat!"
+result = "\"hellohi\""
+
+[newvar]
+challenge = ":\"hi\" hi"
+result = "[]"
+
+[vartest]
+challenge = ":\"hi\" [[hi]]!"
+result = "[ [] ]"
+
+[depthvar]
+challenge = ":\"hi\" hi:[ :\"test\" 1 2 3 4 5 6 ] hi:test"
+result = "[ 1 2 3 4 5 6 ] []"
+
+[internalbreak]
+challenge = "1 2 3 [4 5 breakpoint!]"
+result = """[BREAK : 5 4 ]
+  [ 5 4 ]  3 2 1"""
+
+[shallowbang]
+challenge = "[1 2 3 + [4 5 +]]!"
+result = "[ 0 5 4 ]  5 1"
+
+[deepbang]
+challenge = "[1 2 3 + [4 5 +] !!] !"
+result = "9 5 1"

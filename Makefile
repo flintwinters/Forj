@@ -53,6 +53,12 @@ fjrun:
 	g++ -g main.cpp -o forjlang && \
 	./forjlang test.qfj
 
+challenge:
+	cd forj && \
+	g++ -g main.cpp -o forjlang && \
+	python3 challenge.py $(CHALLENGE) || \
+	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang challenge
+
 fj:
 	cd forj && \
 	g++ -g main.cpp -o forjlang && \
