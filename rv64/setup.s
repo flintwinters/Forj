@@ -20,8 +20,8 @@ _start:
 # 1   25   1   1   2    2      9    1  1   1   1   1   1    2    2     2     2     1   1   1    1    1    1    1   1    1
 	# enable global interrupts for m and s modes
 	# set previous privilege level to s
-    li      t0, 0x1880
-    csrw    mstatus, t0
+    li      t0, 0x0880
+    csrs    mstatus, t0
 
 	# start mtimecmp at 40k
     li      t0, 50000
@@ -29,17 +29,33 @@ _start:
     sd      t0, 0(t1)
 
 # Allocating 1 kernel page
-	call kernelpagesetup
-	li		a0, 0
+	# Set pmpcfg0 to allow read/write/exec of a physical memory region
+	la t0, pagestart
+	csrw pmpaddr0,t0
+	li t0, 0x0f
+	csrw pmpcfg0,t0
+
+	# li t0, -1
+	# csrw pmpaddr1,t0
+	# li t0, 0x1f
+	# csrw pmpcfg1,t0
+
+	sfence.vma x0, x0
+
+	# call kernelpagesetup
+	li		a0, 0x80000198
 	call virtualtophysical
 
-	# # delegate s interrupts to m
-    li      t0, 0x20
-    csrs    mideleg, t0
+	# delegate s interrupts to m
+    # li      t0, 0x20
+    # csrs    mideleg, t0
 
 	# set trap handler location
     la      t0, mtrap
     csrw    mtvec, t0
+
+	la      t0, mtrap
+    csrw    stvec, t0
 
 	# uart init
 	li  t0, 0x10000000
@@ -54,7 +70,7 @@ _start:
 	li		t0, 8
 	slli 	t0, t0, 60
  	# Gets the Physical Page Number of the Page Table
-	la 		t1, _page_table_start
+	la 		t1, pagestart
 	srai 	t1, t1, 12
 	or 		t0, t0, t1
 	csrw 	satp, t0
@@ -67,10 +83,6 @@ _start:
   	csrw    mepc, t0
 
     mret
-
-enterkernel:
-
-	j main
 	
 virtualtophysical:
 # 10.3.2. Virtual Address Translation Process
@@ -80,44 +92,75 @@ virtualtophysical:
 # 2. Let pte be the value of the PTE at address a+va.vpn[i]×8.
 # If accessing pte violates a PMA or PMP check, raise an access-fault exception corresponding to the
 # original access type.
-# 3. If pte.v=0, or if (pte.r=0 and pte.w=1), or if any bits or encodings that are reserved for future standard
-# use are set within pte, stop and raise a page-fault exception corresponding to the original access
-# type.
+# 38-30  29-21   20-12  11-0
+# VPN[2] VPN[1] VPN[0] page-offset
+# 9      9      9      12
+# 55-30   29-21  20-12  11-0
+# PPN[2] PPN[1] PPN[0] page-offset
+# 26     9      9      12
 # 63 62-61 60-54   53-28  27-19 18-10   9-8  7  6  5  4  3  2  1  0
 # N PBMT Reserved PPN[2] PPN[1] PPN[0] RSW  D  A  G  U  X  W  R  V
 # 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
 
 # a0 = virtual address
-	la		t0, _page_table_start
+	la		t0, pagestart
+	
+	li 		t3, 30
+	li 		t4, 3
+
+v2ploop:
+	srl		t1, a0, t3
+	addi	t3, t3, -9
+
+	andi	t1, t1, 0x1ff
+	slli	t1, t1, 3
+
+	add		t0, t0, t1
+	lw		t0, 0(t0) # get the PTE
+
+	srli	t0, t0, 10
+	slli	t0, t0, 12
+
+	bne		t3, t4, v2ploop
+	li 		t1, 0xfff
+	and 	a0, a0, t1
+	add		t0, t0, a0
+	mv		a0, t0
+	ret
+
+physicaltovirtual:
+# a0 = virtual  address
+# a1 = physical address
+	la		t0, pagestart
 	
 	li		t2, 0xf
 	li 		t3, 30
-	# li		t4, 2
+	li 		t4, 21
 
-pageloop:
+p2vloop:
 	srl		t1, a0, t3
 	addi	t3, t3, -9
-	# addi	t4, t4, -1
+
 	andi	t1, t1, 0x1ff
 	slli	t1, t1, 3
 	
 	add		t0, t0, t1
-	lw		t0, 0(t0) # get the PTE
+	lw		t1, 0(t0) # get the PTE
 
-	# and  	t1, t0, t2
-	# bne		t1, t2, pageerror
-
-	srli	a0, t0, 10
+	srli	a0, t1, 10
 	slli	a0, a0, 12
-	# j 		pageloop
+
+	bne		t3, t4, p2vloop
+	
+
 	
 pageerror:
-	ret
+	wfi
 
 kernelpagesetup:
-	la		t0, _page_table_start
+	la		t0, pagestart
 	srli	t1, t0, 2
-	addi	t1, t1, 0x40f
+	addi	t1, t1, 0x401
 	sw		t1, 0(t0)
 	ret
 
@@ -175,20 +218,22 @@ mtrap:
 	# 14 Reserved
 	# > 15 Store page fault
 	# probably should use a switch statement for this
-	andi 	t1, t1, 0xf
+	andi 	t3, t3, 0xf
 
-	li 		t0, 3
-	beq 	t0, t1, breakpoint
-	li 		t0, 1
-	beq 	t0, t1, instructionaccess
-	li 		t0, 5
-	beq 	t0, t1, loadaccess
-	li 		t0, 7
-	beq 	t0, t1, storeaccess
-	li 		t0, 13
-	beq 	t0, t1, loadpage
-	li 		t0, 15
-	beq 	t0, t1, storepage
+	li 		t2, 3
+	beq 	t2, t3, breakpoint
+	li 		t2, 1
+	beq 	t2, t3, instructionaccess
+	li 		t2, 5
+	beq 	t2, t3, loadaccess
+	li 		t2, 7
+	beq 	t2, t3, storeaccess
+	li 		t2, 12
+	beq 	t2, t3, instpage
+	li 		t2, 13
+	beq 	t2, t3, loadpage
+	li 		t2, 15
+	beq 	t2, t3, storepage
 
 	mret
 
@@ -202,6 +247,7 @@ instructionaccess:	# 1
 loadaccess:			# 5
 storeaccess: 		# 7
 # Need to load/store pages for demand paging.
+instpage:			# 12
 loadpage: 			# 13
 storepage:			# 15
 	#
@@ -228,12 +274,11 @@ timerhandler:
 # https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
 serial:
 
+enterkernel:
+	j main
+
 # kernel
 main:
-	la t1, _page_table_start
-	li t0, 0x8000
-	add t1, t1, t0
-	lb t0, 0(t1)
 	# Uart getchar:
 # 	li  t0, 0x10000000
 
@@ -253,9 +298,25 @@ main:
 
 # align to 2^12 = 4096
 # Sv39 page tables contain 2^9 Page Table Entries
+
+# 38-30  29-21   20-12  11-0
+# VPN[2] VPN[1] VPN[0] page-offset
+# 9      9      9      12
+# 0x80000000
+# 55-30   29-21  20-12  11-0
+# PPN[2] PPN[1] PPN[0] page-offset
+# 26     9      9      12
+# 63 62-61 60-54   53-28  27-19 18-10   9-8  7  6  5  4  3  2  1  0
+# N PBMT Reserved PPN[2] PPN[1] PPN[0] RSW  D  A  G  U  X  W  R  V
+# 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
 .align 12
-_page_table_start:
-	.skip 4096
+pagestart:
+.fill 2, 8, 0x0
+.quad 0x20000801
+.align 12
+.quad 0x20000c01
+.align 12
+.quad 0x2000000f
 
 .size	_start, .-_start
 .ident	"GCC: (gc891d8dc3e) 13.2.0"

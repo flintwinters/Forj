@@ -3,9 +3,12 @@ breakpoints = [
     "main",
     # "pageloop",
     "mtrap",
+    # "virtualtophysical",
+    "v2ploop",
 ]
 displays = [
     "/x $mstatus",
+    "/x $mtval",
     # "/i $pc",
     "/i $mepc",
     "/x $mcause",
