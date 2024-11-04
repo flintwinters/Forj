@@ -76,9 +76,7 @@ public:
     Node* parent;
     word val = 0;
     func f; // executable function
-    Node(string s, Node* t, Node* p): name(s), parent(p) {
-        implicit.push_back(t);
-    }
+    Node(string s, Node* t, Node* p): name(s), parent(p) {implicit.push_back(t);}
     // Create a new node, adding it to the vect so it can be deleted later
     static Node* New(string s, Node* t, Node* p) {
         allnodes.push_back(new Node(s, t, p));
@@ -94,16 +92,14 @@ public:
         for (Node* n : implicit) {
             if (!n) {continue;}
             Maybe<Node*> m = n->getvar(s);
-            if (m) {return m;}
+            if (m) {
+                
+                return m;
+            }
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
-    Node* gettype() {
-        return implicit.back();
-        // Maybe<Node*> m = getvar("type");
-        // if (m) {return m;}
-        // return tnothing;
-    }
+    Node* gettype() {return implicit.front();}
     // Search all parents for `s`
     Maybe<Node*> global(string s) {
         if (in(s)) {return (*this)[s];}
@@ -268,7 +264,10 @@ Maybe<string> Text::parse() {
         split(i);
         pull();
         if (i) {W->push(Node::New(peek(), tbang, W->t))->val = i;}
-        else {W->peek()->gettype()->f(W->peek(), W);}
+        else {
+            Node* n = W->peek();
+            n->gettype()->f(n, W);
+        }
         W->searching = false;
         return s;
     }

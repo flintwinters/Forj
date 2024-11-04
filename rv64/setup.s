@@ -314,9 +314,12 @@ pagestart:
 .fill 2, 8, 0x0
 .quad 0x20000801
 .align 12
+
 .quad 0x20000c01
 .align 12
+
 .quad 0x2000000f
+.align 12
 
 .size	_start, .-_start
 .ident	"GCC: (gc891d8dc3e) 13.2.0"

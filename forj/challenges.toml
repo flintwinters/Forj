@@ -62,3 +62,23 @@ result = "[ 0 5 4 ]  5 1"
 [deepbang]
 challenge = "[1 2 3 + [4 5 +] !!] !"
 result = "9 5 1"
+
+[pull]
+challenge = "1 2 3 pull!"
+result = "2 1"
+
+[condpull]
+challenge = "1 2 1 [pull]?!"
+result = ""
+
+[addclosure]
+challenge = """
+  :"n" 
+  n literal entype!
+  1 2 n:+ !
+"""
+result = "3"
+
+# [askfornum]
+# challenge = ":\"hi\" hi:2"
+# result = "2"

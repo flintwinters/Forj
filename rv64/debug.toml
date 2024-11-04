@@ -1,10 +1,10 @@
 breakpoints = [
     "_start",
-    "main",
+    "enterkernel",
     # "pageloop",
     "mtrap",
     # "virtualtophysical",
-    "v2ploop",
+    # "v2ploop",
 ]
 displays = [
     "/x $mstatus",

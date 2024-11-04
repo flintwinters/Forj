@@ -1,13 +1,14 @@
 breakpoints = [
-    # "BREAKPOINT",
-    # "errorexit",
-    "8",
+    "BREAKPOINT",
+    "errorexit",
+    "132",
+    # "8",
     # "forj.cpp:265",
     # "225",
     # "forj.cpp:95",
 ]
 displays = [
-    "idx",
-    "lines",
-    "i",
+    # "idx",
+    # "lines",
+    # "i",
 ]

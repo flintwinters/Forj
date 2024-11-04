@@ -24,7 +24,7 @@ template <typename T> string Stack<T>::str(string (tostr)(T)) {
 }
 
 string Node::str() {
-    return Stack::str([](Node* n)->string{
+    return Stack::str([](Node* n)->string {
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
@@ -181,6 +181,12 @@ Maybe<Node*> fjpush(Node* n, Wrap* W) {
     W->push(W->peek(W->pull()->val));
     return n;
 }
+Maybe<Node*> entype(Node* n, Wrap* W) {
+    W->pull();
+    W->peek(1)->implicit.push_back(W->peek(0));
+    W->pull(); W->pull();
+    return n;
+}
 int errorexit(Maybe<string> m, string s) {
     printf("%s\n", m.str(s).c_str());
     return 1;
@@ -195,16 +201,16 @@ int main(int argc, char** argv) {
     fclose(FP);
     s = s.substr(0, s.size()-1);
 
-    (ttype      = Node::New("type",      0,     0))->f = typefunc;
-    (tnothing   = Node::New("nothing",   ttype, 0))->f = nothingfunc;
-    (tstring    = Node::New("string",    ttype, 0))->f = stringfunc;
-    (tliteral   = Node::New("literal",   ttype, 0))->f = literalfunc;
-    (tarray     = Node::New("array",     ttype, 0))->f = arrayfunc;
-    (tbang      = Node::New("bang",      ttype, 0))->f = bangfunc;
-    (texec      = Node::New("exec",      ttype, 0))->f = execfunc;
-
     Node* Global = Node::New("Global", tarray, 0);
     Wrap* W = new Wrap(Global, 0);
+
+    (ttype      = W->t->addvar("type",      0))->f = typefunc;
+    (tnothing   = W->t->addvar("nothing",   ttype))->f = nothingfunc;
+    (tstring    = W->t->addvar("string",    ttype))->f = stringfunc;
+    (tliteral   = W->t->addvar("literal",   ttype))->f = literalfunc;
+    (tarray     = W->t->addvar("array",     ttype))->f = arrayfunc;
+    (tbang      = W->t->addvar("bang",      ttype))->f = bangfunc;
+    (texec      = W->t->addvar("exec",      ttype))->f = execfunc;
     W->t->addvar("breakpoint",  texec)->f = BREAKPOINT;
     W->t->addvar("loadfile",    texec)->f = loadfile;
     W->t->addvar("savefile",    texec)->f = savefile;
@@ -213,8 +219,10 @@ int main(int argc, char** argv) {
     W->t->addvar("swap",        texec)->f = swapnode;
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
+    W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("+",           texec)->f = addnode;
+    tliteral->addvar("+", texec)->f = addnode;
     W->t->addvar("system",      texec)->f = runsystem;
     W->t->addvar("pull",        texec)->f = fjpull;
     W->t->addvar("push",        texec)->f = fjpush;
