@@ -70,6 +70,8 @@ Node* texec;
 // Nodes track variable names, and have their own optional stacks.
 vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
+private:
+    Node() {}
 public:
     string name;
     vector<Node*> implicit;
@@ -77,10 +79,27 @@ public:
     word val = 0;
     func f; // executable function
     Node(string s, Node* t, Node* p): name(s), parent(p) {implicit.push_back(t);}
+    Node(Node& n) {
+        name = n.name;
+        implicit = n.implicit;
+        parent = n.parent;
+        val = n.val;
+        f = n.f;
+    }
     // Create a new node, adding it to the vect so it can be deleted later
     static Node* New(string s, Node* t, Node* p) {
         allnodes.push_back(new Node(s, t, p));
         return allnodes.back();
+    }
+    static Node* New(Node* n) {
+        Node* m = new Node();
+        m->name = n->name;
+        m->implicit = n->implicit;
+        m->parent = n->parent;
+        m->val = n->val;
+        m->f = n->f;
+        allnodes.push_back(m);
+        return m;
     }
     // Delete all nodes created with `New`
     static void deleteall() {for (Node* n : allnodes) {delete n;}}

@@ -135,6 +135,29 @@ Maybe<Node*> execif(Node* n, Wrap* W) {
     else {W->pull(); W->pull();}
     return n;
 }
+Maybe<Node*> link(Node* n, Wrap* W) {
+    W->pull();
+    W->peek(1)->val = (word) W->peek(0);
+    W->pull(); W->pull();
+    return n;
+}
+Maybe<Node*> lunk(Node* n, Wrap* W) {
+    W->pull();
+    Node* u = W->pull();
+    W->push((Node*) u->val);
+    return n;
+}
+Maybe<Node*> setval(Node* n, Wrap* W) {
+    W->pull();
+    W->peek(1)->val = W->peek(0)->val;
+    W->pull();
+    return n;
+}
+Maybe<Node*> clone(Node* n, Wrap* W) {
+    W->pull();
+    W->push(Node::New(W->pull()));
+    return n;
+}
 Maybe<Node*> stringconcat(Node* n, Wrap* W) {
     W->pull();
     string* a = (string*) W->pull()->val;
@@ -183,7 +206,7 @@ Maybe<Node*> fjpush(Node* n, Wrap* W) {
 }
 Maybe<Node*> entype(Node* n, Wrap* W) {
     W->pull();
-    W->peek(1)->implicit.push_back(W->peek(0));
+    W->peek(1)->implicit[0] = W->peek(0);
     W->pull(); W->pull();
     return n;
 }
@@ -221,6 +244,10 @@ int main(int argc, char** argv) {
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
+    W->t->addvar("link",          texec)->f = link;
+    W->t->addvar("lunk",          texec)->f = lunk;
+    W->t->addvar("set",          texec)->f = setval;
+    W->t->addvar("clone",       texec)->f = clone;
     W->t->addvar("+",           texec)->f = addnode;
     tliteral->addvar("+", texec)->f = addnode;
     W->t->addvar("system",      texec)->f = runsystem;
