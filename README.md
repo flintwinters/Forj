@@ -1,6 +1,11 @@
 # Forj
 
-The Forj systems programming language is a simple compiled stack language.
+Forj is a language and an OS.
+The language is stack based, functional, and has first-class types.
+The OS is written in Forj, has a 39 bit virtual address space, and round robin scheduler.
+
+The project mission statement is to "create the world's best documentation system."
+Language and operating system integration are essential to achieve that.
 
 ## Planned language Features
 
@@ -16,7 +21,7 @@ The Forj systems programming language is a simple compiled stack language.
 
 Everything is a value until `!` is used on it.
 
-The words, `!!`, `!!!`, etc, represent functions that return their successor.
+The words, `!!`, `!!!`, etc, represent functions that return their predecessor.
 
 `3 fact !! !` (6)
 
@@ -36,7 +41,6 @@ We need to use `!!`
 
 - Create a self hosting stack based language.
 - Write a kernel for RISC-V in the language.
-- Build Forj as a syntax wrapper for functions on a stack machine in `Idris`, allowing Forj code to be translated back to Idris for easier verification.
 
 ### Stretch Goals
 
