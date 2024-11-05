@@ -1,5 +1,4 @@
 #include "forj.cpp"
-#include <cstdio>
 
 template <typename T> string Maybe<T>::str(string s) {
     int idx = 0;
@@ -53,6 +52,7 @@ Maybe<Node*> bangfunc(Node* n, Wrap* W) {
 Maybe<Node*> execfunc(Node* n, Wrap* W) {return n->f(n, W);}
 Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
     W->pull();
+    Node* m = W->peek();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
         if (W->peek()->gettype() != tarray) {
@@ -135,6 +135,13 @@ Maybe<Node*> execif(Node* n, Wrap* W) {
     else {W->pull(); W->pull();}
     return n;
 }
+Maybe<Node*> assign(Node* n, Wrap* W) {
+    W->pull();
+    string* s = (string*) W->pull()->val;
+    W->peek(0)->name = *s;
+    (*W->t)[*s] = W->pull();
+    return n;
+}
 Maybe<Node*> link(Node* n, Wrap* W) {
     W->pull();
     W->peek(1)->val = (word) W->peek(0);
@@ -155,7 +162,7 @@ Maybe<Node*> setval(Node* n, Wrap* W) {
 }
 Maybe<Node*> clone(Node* n, Wrap* W) {
     W->pull();
-    W->push(Node::New(W->pull()));
+    W->push(new Node(*W->pull()));
     return n;
 }
 Maybe<Node*> stringconcat(Node* n, Wrap* W) {
@@ -244,19 +251,16 @@ int main(int argc, char** argv) {
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
-    W->t->addvar("link",          texec)->f = link;
-    W->t->addvar("lunk",          texec)->f = lunk;
-    W->t->addvar("set",          texec)->f = setval;
+    W->t->addvar("assign",      texec)->f = assign;
+    W->t->addvar("<link",       texec)->f = link;
+    W->t->addvar(">lunk",       texec)->f = lunk;
+    W->t->addvar("set",         texec)->f = setval;
     W->t->addvar("clone",       texec)->f = clone;
     W->t->addvar("+",           texec)->f = addnode;
     tliteral->addvar("+", texec)->f = addnode;
     W->t->addvar("system",      texec)->f = runsystem;
     W->t->addvar("pull",        texec)->f = fjpull;
     W->t->addvar("push",        texec)->f = fjpush;
-    W->pushscope(W->t->addvar("ok", tliteral));
-    (*W->t)["ok"]->val = 3;
-    (*W->t)["ok"]->addvar("beeb", tliteral)->addvar("sob", tliteral);
-    (*(*W->t)["ok"])["beeb"]->val = 2;
 
     Text* T = new Text(s, W);
     Maybe<string> m = T->parse();

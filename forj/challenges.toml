@@ -72,11 +72,11 @@ challenge = "[1 2 3 + [4 5 +] !!!] !! ! !"
 result = "9 5 1"
 
 [link]
-challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] link !"
+challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] <link !"
 result = ""
 
 [storelink]
-challenge = ":\"hi\" hi [1 2 3] link ! hi lunk !"
+challenge = ":\"hi\" hi [1 2 3] <link ! hi >lunk !"
 result = "[ 3 2 1 ]"
 
 [pull0]
@@ -106,13 +106,38 @@ result = "3"
 [clone]
 challenge = """
   :"n"
-  n literal entype!   
+  n literal entype!
   n 4 set! clone!
   n n 9 +! set!
   n (n = 4)
   2 push! (clone = 13)
 """
 result = "4 13 13 4"
+
+[assign]
+challenge = """
+  1 "a" assign !
+  a literal entype!
+  a
+"""
+result = "1"
+
+[miniclosure]
+challenge = """
+  :"n" :"m"
+  m:"z"
+  m:z literal entype!
+  m:z 2 set!
+  m:z
+  m clone!
+  (the clone isn't deep:
+    references to variables are not copied)
+  "o" assign!
+  o:z o:z 2 +! set!
+  o:z
+"""
+result = "4 4 4 4"
+
 
 # [askfornum]
 # challenge = ":\"hi\" hi:2"
