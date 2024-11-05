@@ -27,6 +27,12 @@ string Node::str() {
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
+        if (n->gettype() == tbang)    {
+            string s = "!";
+            for (int i = 0; i < n->val; i++) {
+                s += '!';
+            }
+            return "\033[33;1m" + s + "\033[0m";}
         if (n->isempty()) {return "[]";}
         if (n->gettype() == tarray) {return " ["+n->str()+"] ";}
         return "["+n->str()+"]";

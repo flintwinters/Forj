@@ -71,6 +71,14 @@ result = "9 5 1"
 challenge = "[1 2 3 + [4 5 +] !!!] !! ! !"
 result = "9 5 1"
 
+[depth4]
+challenge = "[ 1 [ 2 [ 3 [4] !!] !!] !!] !"
+result = "4 3 2 1"
+
+[depth4_2]
+challenge = "[ 1 [ 2 [ 3 [4] !!] !!] ] !"
+result = "[ !!  [ !!  [ 4 ]  3 ]  2 ]  1"
+
 [link]
 challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] <link !"
 result = ""
