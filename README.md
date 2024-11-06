@@ -1,5 +1,7 @@
 # Forj
 
+As computing becomes necessary for daily life, its providers attain greater influence over us, making democratization, and commoditization of computing an ethical imperative.
+
 Forj is a language and an OS.
 The language is stack based, functional, and has first-class types.
 The OS is written in Forj, has a 39 bit virtual address space, and round robin scheduler.
