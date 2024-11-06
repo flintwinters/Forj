@@ -76,7 +76,11 @@ public:
     Node* parent;
     word val = 0;
     func f; // executable function
-    Node(string s, Node* t, Node* p): name(s), parent(p) {implicit.push_back(t);}
+    // Create a new node, adding it to the vect so it can be deleted later
+    Node(string s, Node* t, Node* p): name(s), parent(p) {
+        implicit.push_back(t);
+        allnodes.push_back(this);
+    }
     Node(Node& n): map<string, Node*>(n) {
         name = n.name;
         implicit = n.implicit;
@@ -85,25 +89,17 @@ public:
         f = n.f;
         allnodes.push_back(this);
     }
-    // Create a new node, adding it to the vect so it can be deleted later
-    static Node* New(string s, Node* t, Node* p) {
-        allnodes.push_back(new Node(s, t, p));
-        return allnodes.back();
-    }
     // Delete all nodes created with `New`
     static void deleteall() {for (Node* n : allnodes) {delete n;}}
     // If the variable `s` exists
     bool in(string s) {return find(s) != end();}
-    Node* addvar(string s, Node* t) {return (*this)[s] = Node::New(s, t, this);}
+    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t, this);}
     Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
         for (Node* n : implicit) {
             if (!n) {continue;}
             Maybe<Node*> m = n->getvar(s);
-            if (m) {
-                
-                return m;
-            }
+            if (m) {return m;}
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
@@ -233,7 +229,7 @@ string Text::capture(string close) {
 Maybe<string> Text::final(string s) {
     if (s == "") {return peek();}
     if (isnum(s[0])) {
-        W->push(Node::New(s, tliteral, W->t))->val = tonum(s);
+        W->push(new Node(s, tliteral, W->t))->val = tonum(s);
         return peek();
     }
     Maybe<Node*> m = W->search(s);
@@ -271,7 +267,7 @@ Maybe<string> Text::parse() {
         while (peek()[++i] == '!');
         split(i);
         pull();
-        if (i) {W->push(Node::New(peek(), tbang, W->t))->val = i;}
+        if (i) {W->push(new Node(peek(), tbang, W->t))->val = i;}
         else {
             Node* n = W->peek();
             n->gettype()->f(n, W);
@@ -282,7 +278,7 @@ Maybe<string> Text::parse() {
     else if (t == '[') {
         Node* n = W->t;
         if (W->searching) {W = W->pullscope()->pushscope(n);}
-        else {W = W->pushscope(Node::New("", tarray, n));}
+        else {W = W->pushscope(new Node("", tarray, n));}
     }
     else if (t == ']') {
         Node* n = W->t;
@@ -295,7 +291,7 @@ Maybe<string> Text::parse() {
             W = W->pullscope();
             return pull();
         }
-        W->push(Node::New("", tstring, 0))->val = (word) new string(str);
+        W->push(new Node("", tstring, 0))->val = (word) new string(str);
         return str;
     }
     else if (t == '(') {return capture(")");}
