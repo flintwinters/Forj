@@ -49,9 +49,13 @@ Maybe<Node*> stringfunc(Node* n, Wrap* W) {
 }
 Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
 Maybe<Node*> bangfunc(Node* n, Wrap* W) {
-    if (W->peek()->val-- == 1) {
+    Node* m = W->peek();
+    if (m->val == 1) {
         W->pull();
         W->peek()->gettype()->f(W->peek(), W);
+    }
+    else {
+        W->push(new Node("", tbang))->val = m->val-1;;
     }
     return n;
 }

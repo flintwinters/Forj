@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <list>
 
 using namespace std;
 typedef long long word;
@@ -44,6 +45,7 @@ public:
         return t;
     }
     T peek(int i = 0) {return s[sp-i];}
+    void under(T t) {s.insert(s.begin(), t);}
     void swapi(int i = 0) {
         T b = peek(i);
         s[sp-i] = peek();

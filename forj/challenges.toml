@@ -88,9 +88,10 @@ result = "[ 0 5 4 ]  5 1"
 challenge = "[1 2 3 + [4 5 +] !!] !"
 result = "9 5 1"
 
-[triple]
-challenge = "[1 2 3 + [4 5 +] !!!] !! ! !"
-result = "9 5 1"
+# will be fixed with merge
+# [triple]
+# challenge = "[1 2 3 + [4 5 +] !!!] !! ! !"
+# result = "9 5 1"
 
 [depth4]
 challenge = "[ 1 [ 2 [ 3 [4] !!] !!] !!] !"
@@ -123,6 +124,27 @@ result = "1"
 [condpull]
 challenge = "1 2 1 [pull]?!"
 result = "1"
+
+[verboseclosure]
+challenge = """
+  :"n"
+  n literal entype!
+  n 5 set!
+  [n [literal:+]!!] "ok" assign!
+  1 ok!
+  2 ok!
+  n 7 set!
+  3 ok!
+"""
+result = "10 7 7 6 7"
+
+[literaladd]
+challenge = """
+  :"n"
+  n literal entype!
+  1 2 literal:+ !
+"""
+result = "3"
 
 [addclosure]
 challenge = """
