@@ -12,7 +12,7 @@ def fail(name, s):
 def runforj(v):
     with open("challenge", "w") as f:
         f.write(v["challenge"]+" ")
-    if system("forjlang challenge > challengeresult"):
+    if system("forjlang challenge > challengeresult")//256 > 1:
         return "execution returned error code"
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     with open("challengeresult", "r") as f:

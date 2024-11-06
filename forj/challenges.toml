@@ -54,6 +54,27 @@ result = "[] [ 6 5 4 3 2 1 ]"
 challenge = """:\"hi\" hi:[ 1 2 3 4 5 6 ] hi"""
 result = "[ 6 5 4 3 2 1 ] [ 6 5 4 3 2 1 ]"
 
+[depthvar3]
+challenge = """
+  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
+  hi:test:[ :\"okay\" ]
+  hi:test:okay
+"""
+result = "[] [] [ 6 5 4 3 2 1 ]"
+
+[depthvar3fail]
+challenge = """
+  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
+  hi:test:[ :\"okay\" ]
+  hi:test:okaye
+"""
+result = """
+<4:67>:Couldn't find string 'okaye' in scope 'test'
+  :"hi" hi:[ 1 2 3 :"test" 4 5 6 ]
+  hi:test:[ :"okay" ]
+  hi:test:!>>>>>okaye
+"""
+
 [internalbreak]
 challenge = "1 2 3 [4 5 breakpoint!]"
 result = """[BREAK : 5 4 ]

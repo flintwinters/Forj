@@ -71,20 +71,18 @@ Node* texec;
 vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
+    vector<Node*> parents;
     string name;
-    vector<Node*> implicit;
-    Node* parent;
     word val = 0;
     func f; // executable function
     // Create a new node, adding it to the vect so it can be deleted later
-    Node(string s, Node* t, Node* p): name(s), parent(p) {
-        implicit.push_back(t);
+    Node(string s, Node* t): name(s) {
+        parents.push_back(t);
         allnodes.push_back(this);
     }
     Node(Node& n): map<string, Node*>(n) {
         name = n.name;
-        implicit = n.implicit;
-        parent = n.parent;
+        parents = n.parents;
         val = n.val;
         f = n.f;
         allnodes.push_back(this);
@@ -93,24 +91,20 @@ public:
     static void deleteall() {for (Node* n : allnodes) {delete n;}}
     // If the variable `s` exists
     bool in(string s) {return find(s) != end();}
-    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t, this);}
+    Node* addvar(string s, Node* t) {return (*this)[s] = new Node(s, t);}
     Maybe<Node*> getvar(string s) {
         if (in(s)) {return (*this)[s];}
-        for (Node* n : implicit) {
+        return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
+    }
+    Node* type(int i) {return parents[parents.size()-i-1];}
+    Node* gettype() {return type(0);}
+    // Search all parentss for `s`
+    Maybe<Node*> global(string s) {
+        if (in(s)) {return (*this)[s];}
+        for (Node* n : parents) {
             if (!n) {continue;}
             Maybe<Node*> m = n->getvar(s);
             if (m) {return m;}
-        }
-        return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
-    }
-    Node* gettype() {return implicit.front();}
-    // Search all parents for `s`
-    Maybe<Node*> global(string s) {
-        if (in(s)) {return (*this)[s];}
-        if (parent) {
-            Maybe<Node*> m = parent->global(s);
-            if (m) {return m;}
-            return m.addmsg(":" + name);
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
@@ -135,7 +129,7 @@ public:
         if (prev) {return prev->global(s);}
         return m;
     }
-    Maybe<Node*> search(string s) {return (searching) ? t->getvar(s) : global(s);}
+    Maybe<Node*> search(string s) {return (searching) ? t->global(s) : global(s);}
     int scopedepth() {
         if (prev) {return 1+prev->scopedepth();}
         return 1;
@@ -229,7 +223,7 @@ string Text::capture(string close) {
 Maybe<string> Text::final(string s) {
     if (s == "") {return peek();}
     if (isnum(s[0])) {
-        W->push(new Node(s, tliteral, W->t))->val = tonum(s);
+        W->push(new Node(s, tliteral))->val = tonum(s);
         return peek();
     }
     Maybe<Node*> m = W->search(s);
@@ -267,7 +261,7 @@ Maybe<string> Text::parse() {
         while (peek()[++i] == '!');
         split(i);
         pull();
-        if (i) {W->push(new Node(peek(), tbang, W->t))->val = i;}
+        if (i) {W->push(new Node(peek(), tbang))->val = i;}
         else {
             Node* n = W->peek();
             n->gettype()->f(n, W);
@@ -278,7 +272,7 @@ Maybe<string> Text::parse() {
     else if (t == '[') {
         Node* n = W->t;
         if (W->searching) {W = W->pullscope()->pushscope(n);}
-        else {W = W->pushscope(new Node("", tarray, n));}
+        else {W = W->pushscope(new Node("", tarray));}
     }
     else if (t == ']') {
         Node* n = W->t;
@@ -291,7 +285,7 @@ Maybe<string> Text::parse() {
             W = W->pullscope();
             return pull();
         }
-        W->push(new Node("", tstring, 0))->val = (word) new string(str);
+        W->push(new Node("", tstring))->val = (word) new string(str);
         return str;
     }
     else if (t == '(') {return capture(")");}

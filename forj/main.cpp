@@ -70,7 +70,7 @@ Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
 Maybe<Node*> addnode(Node* n, Wrap* W) {
     W->pull();
     word w = W->pull()->val+W->pull()->val;
-    W->push(new Node("", tliteral, W->t))->val = w;
+    W->push(new Node("", tliteral))->val = w;
     return n;
 }
 Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
@@ -121,7 +121,7 @@ Maybe<Node*> splitat(Node* n, Wrap* W) {
     W->pull();
     word w = W->pull()->val;
     string* str = (string*) W->peek()->val;
-    W->push(new Node("", tstring, 0))->val = (word) new string(str->substr(w));
+    W->push(new Node("", tstring))->val = (word) new string(str->substr(w));
     W->peek(1)->val = (word) new string(str->substr(0, w));
     delete str;
     return n;
@@ -219,7 +219,7 @@ Maybe<Node*> fjpush(Node* n, Wrap* W) {
 }
 Maybe<Node*> entype(Node* n, Wrap* W) {
     W->pull();
-    W->peek(1)->implicit[0] = W->peek(0);
+    W->peek(1)->parents.push_back(W->peek(0));
     W->pull(); W->pull();
     return n;
 }
@@ -237,7 +237,7 @@ int main(int argc, char** argv) {
     fclose(FP);
     s = s.substr(0, s.size()-1);
 
-    Node* Global = new Node("Global", tarray, 0);
+    Node* Global = new Node("Global", tarray);
     Wrap* W = new Wrap(Global, 0);
 
     (ttype      = W->t->addvar("type",      0))->f = typefunc;
