@@ -177,22 +177,21 @@ challenge = """
 """
 result = "1"
 
-[miniclosure]
+[shallowclone]
 challenge = """
   :"n" :"m"
   m:"z"
   m:z literal entype!
   m:z 2 set!
   m:z
-  m clone!
+  m:z clone! "b" assign!
   (the clone isn't deep:
     references to variables are not copied)
-  "o" assign!
+  m clone! "o" assign!
   o:z o:z 2 +! set!
-  o:z
+  o:z b
 """
-result = "4 4 4 4"
-
+result = "2 4 4 4 4"
 
 # [askfornum]
 # challenge = ":\"hi\" hi:2"
