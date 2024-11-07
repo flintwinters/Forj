@@ -1,3 +1,7 @@
+[nothing]
+challenge = ""
+result = ""
+
 [one]
 challenge = "1"
 result = "1"
@@ -11,7 +15,7 @@ challenge = "1 4 +"
 result = "0 4 1"
 
 [add]
-challenge = "1 2 +!"
+challenge = "1 2 + !"
 result = "3"
 
 [arradd]
@@ -57,6 +61,27 @@ result = "[] [ 6 5 4 3 2 1 ]"
 [depthvar2]
 challenge = """:\"hi\" hi:[ 1 2 3 4 5 6 ] hi"""
 result = "[ 6 5 4 3 2 1 ] [ 6 5 4 3 2 1 ]"
+
+[depthvar3]
+challenge = """
+  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
+  hi:test:[ :\"okay\" ]
+  hi:test:okay
+"""
+result = "[] [] [ 6 5 4 3 2 1 ]"
+
+[depthvar3fail]
+challenge = """
+  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
+  hi:test:[ :\"okay\" ]
+  hi:test:okaye
+"""
+result = """
+<4:67>:Couldn't find string 'okaye' in scope 'test'
+  :"hi" hi:[ 1 2 3 :"test" 4 5 6 ]
+  hi:test:[ :"okay" ]
+  hi:test:!>>>>>okaye
+"""
 
 [internalbreak]
 challenge = "1 2 3 [4 5 breakpoint!]"
@@ -111,6 +136,27 @@ result = "1"
 challenge = "1 2 1 pull ?!"
 result = "2 1"
 
+[verboseclosure]
+challenge = """
+  :"n"
+  n literal entype!
+  n 5 set!
+  [n [literal:+]!!] "ok" assign!
+  1 ok!
+  2 ok!
+  n 7 set!
+  3 ok!
+"""
+result = "10 7 7 6 7"
+
+[literaladd]
+challenge = """
+  :"n"
+  n literal entype!
+  1 2 literal:+ !
+"""
+result = "3"
+
 [addclosure]
 challenge = """
   :"n" 
@@ -138,21 +184,21 @@ challenge = """
 """
 result = "1"
 
-[miniclosure]
+[shallowclone]
 challenge = """
   :"n" :"m"
   m:"z"
   m:z literal entype!
   m:z 2 set!
   m:z
-  m clone!
+  m:z clone! "b" assign!
   (the clone isn't deep:
     references to variables are not copied)
-  "o" assign!
+  m clone! "o" assign!
   o:z o:z 2 +! set!
-  o:z
+  o:z b
 """
-result = "4 4 4 4"
+result = "2 4 4 4 4"
 
 [fib]
 challenge = """
