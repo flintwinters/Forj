@@ -258,7 +258,7 @@ int arrayfunc(Node* n, Wrap* W);
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
-    t = splitfind(":[](!\"");
+    t = splitfind(":[](!\"`");
     if (!t) {
         Maybe<string> m = final(peek());
         if (m) {return pull();}
@@ -299,8 +299,10 @@ Maybe<string> Text::parse() {
         Node* n = W->t;
         (W = W->pullscope())->push(n);
     }
-    else if (t == '\"') {
-        string str = capture("\"");
+    else if (t == '\"' || t == '`') {
+        string str;
+        if (t == '\"') {str = capture("\"");}
+        else {str = capture("`");}
         if (W->searching) {
             W->t->addvar(str, tnothing);
             W = W->pullscope();
