@@ -37,6 +37,7 @@ private:
 public:
     int sp = -1; // stack pointer
     Stack() {}
+    Stack(Stack& stk): s(stk.s) {}
     T pull(int i = 1) {return s[(sp -= i)+1];}
     T push(T t) {
         sp++;
@@ -82,7 +83,8 @@ public:
         parents.push_back(t);
         allnodes.push_back(this);
     }
-    Node(Node& n): map<string, Node*>(n) {
+
+    Node(Node& n): map<string, Node*>(n), Stack<Node*>(n) {
         name = n.name;
         parents = n.parents;
         val = n.val;
@@ -100,6 +102,9 @@ public:
     }
     Node* type(int i) {return parents[parents.size()-i-1];}
     Node* gettype() {return type(0);}
+    void mirror(Node* n) {
+
+    }
     int exec(Wrap* W);
     // Search all parentss for `s`
     Maybe<Node*> global(string s) {
@@ -118,13 +123,14 @@ public:
 class Wrap {
 public:
     Node* t; // Current node
+    bool debugging = false;
     // Are we currently searching, ie `a:b:c`
     bool searching = false;
-    Wrap* prev, *next;
-    Wrap(Node* t, Wrap* p, Wrap* n = 0): t(t), prev(p), next(n) {}
+    Wrap* prev;
+    Wrap(Node* t, Wrap* p, Wrap* n = 0): t(t), prev(p) {}
     // Move to a scope, ie: hello:[]
-    Wrap* pushscope(Node* node) {return next = new Wrap(node, this);}
-    Wrap* pullscope() {Wrap* w = prev; w->next = next; delete this; return w;}
+    Wrap* pushscope(Node* node) {return new Wrap(node, this);}
+    Wrap* pullscope() {Wrap* w = prev; delete this; return w;}
 
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->global(s);
@@ -138,9 +144,17 @@ public:
         return 1;
     }
 
+    // Separated into a function for breakpoints
+    void debug() {
+        printf("\033[0m%s\n", t->str().c_str());
+    }
     // Pass functions to the current node
     Node* peek(int i = 0) {return t->peek(i);}
-    Node* push(Node* n) {return t->push(n);}
+    Node* push(Node* n) {
+        t->push(n);
+        if (debugging) {debug();}
+        return t->peek();
+    }
     Node* pull(int i = 1) {return t->pull(i);}
 };
 

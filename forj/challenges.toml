@@ -12,7 +12,7 @@ result = "2 1 0"
 
 [addfunc]
 challenge = "1 4 +"
-result = "0 4 1"
+result = "+ 4 1"
 
 [add]
 challenge = "1 2 + !"
@@ -88,16 +88,20 @@ challenge = "1 2 3 [4 5 breakpoint!]"
 result = """[BREAK : 5 4 ]
   [ 5 4 ]  3 2 1"""
 
+[readdouble]
+challenge = "!!"
+result = "!!"
+
 [shallowbang]
 challenge = "[1 2 3 + [4 5 +]]!"
-result = "[ 0 5 4 ]  5 1"
+result = "[ + 5 4 ]  5 1"
 
 [deepbang]
 challenge = "[1 2 3 + [4 5 +] !!] !"
 result = "9 5 1"
 
 [triple]
-challenge = "[1 2 3 + [4 5 +] breakpoint !!! ] !! ! !"
+challenge = "[1 2 3 + [4 5 +] !!! ] !! ! !"
 result = "9 5 1"
 
 [depth4]
@@ -211,9 +215,11 @@ result = "13 8"
 [factorial]
 challenge = """
   :"factorial"
-  [breakpoint [0 push 1 -]!! [factorial [breakpoint] !!! *] ?!!] "factorial" assign!
+  factorial [
+    0 push 1 -
+    factorial >lunk ? *
+  ] <link!
   factorial array entype!
-  5 factorial!
-  factorial
+  1 5 factorial >lunk! !
 """
-result = ""
+result = "120"

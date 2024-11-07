@@ -25,7 +25,7 @@ template <typename T> string Stack<T>::str(string (tostr)(T)) {
 string Node::str() {
     return Stack::str([](Node* n)->string {
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
-        if (n->gettype() == texec)    {return "\033[31m" + to_string(n->val) + "\033[0m";}
+        if (n->gettype() == texec)    {return "\033[31m" + n->name + "\033[0m";}
         if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
         if (n->gettype() == tbang)    {
             string s = "!";
@@ -57,14 +57,14 @@ int stringfunc(Wrap* W) {
 }
 int literalfunc(Wrap* W) {W->pull(); return 1;}
 int bangfunc(Wrap* W) {
-    W->pull(); 
+    W->pull();
     Node* m = W->peek();
     if (m->val == 1) {
         W->pull();
         W->peek()->exec(W);
     }
     else {
-        W->push(new Node("", tbang))->val = m->val-1;;
+        W->push(new Node("", tbang))->val = W->pull()->val-1;;
     }
     return 1;
 }
@@ -72,7 +72,6 @@ int execfunc(Wrap* W) {return W->peek()->f(W);}
 int arrayfunc(Wrap* W) {
     Node* n = W->pull(); 
     W->pull();
-    Node* m = W->peek();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
         if (W->peek()->gettype() != tarray) {
@@ -88,22 +87,22 @@ int addnode(Wrap* W) {
     return 1;
 }
 int subnode(Wrap* W) {
-    W->pull();
+    W->pull(2);
     word w = W->peek(1)->val-W->peek(0)->val;
-    W->pull(); W->pull();
+    W->pull(2);
     W->push(new Node("", tliteral))->val = w;
     return 1;
 }
 int mulnode(Wrap* W) {
-    W->pull();
+    W->pull(2);
     word w = W->pull()->val*W->pull()->val;
     W->push(new Node("", tliteral))->val = w;
     return 1;
 }
 int divnode(Wrap* W) {
-    W->pull();
+    W->pull(2);
     word w = W->peek(1)->val/W->peek(0)->val;
-    W->pull(); W->pull();
+    W->pull(2);
     W->push(new Node("", tliteral))->val = w;
     return 1;
 }
@@ -115,6 +114,11 @@ int BREAKPOINT(Wrap* W) {
         return 1;
     }
     printf("[\033[31mBREAK \033[0m:%s]\n", W->t->str().c_str());
+    return 1;
+}
+int DEBUG(Wrap* W) {
+    W->pull(2);
+    W->debugging = !W->debugging;
     return 1;
 }
 int loadfile(Wrap* W) {
@@ -169,7 +173,7 @@ int swapnode(Wrap* W) {
 int execif(Wrap* W) {
     W->pull(2);
     if (W->peek(1)->val != 0) {
-        W->pull()->exec(W);
+        W->peek()->exec(W);
     }
     else {W->pull(2);}
     return 1;
@@ -280,6 +284,7 @@ int main(int argc, char** argv) {
     (tbang      = W->t->addvar("bang",      ttype))->f = bangfunc;
     (texec      = W->t->addvar("exec",      ttype))->f = execfunc;
     W->t->addvar("breakpoint",  texec)->f = BREAKPOINT;
+    W->t->addvar("debug",       texec)->f = DEBUG;
     W->t->addvar("loadfile",    texec)->f = loadfile;
     W->t->addvar("savefile",    texec)->f = savefile;
     W->t->addvar("appendfile",  texec)->f = appendfile;
