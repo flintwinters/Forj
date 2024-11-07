@@ -1,3 +1,7 @@
+[nothing]
+challenge = ""
+result = ""
+
 [basic]
 challenge = "0 1 2"
 result = "2 1 0"
@@ -7,7 +11,7 @@ challenge = "1 4 +"
 result = "0 4 1"
 
 [add]
-challenge = "1 2 +!"
+challenge = "1 2 + !"
 result = "3"
 
 [arradd]

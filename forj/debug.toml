@@ -1,14 +1,16 @@
 breakpoints = [
     "BREAKPOINT",
     "errorexit",
-    "132",
+    "addnode",
+    "execfunc",
+    "forj.cpp:exec",
     # "8",
     # "forj.cpp:265",
     # "225",
     # "forj.cpp:95",
 ]
 displays = [
-    # "idx",
+    "*W->peek(0)",
     # "lines",
     # "i",
 ]

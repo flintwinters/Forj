@@ -40,55 +40,65 @@ string Node::str() {
 }
 
 // functions to be executed when bang is called on a type
-Maybe<Node*> typefunc(Node* n, Wrap* W) {printf("hi from typefunc\n"); return n;}
-Maybe<Node*> nothingfunc(Node* n, Wrap* W) {printf("hi from nothingfunc\n"); return n;}
-Maybe<Node*> stringfunc(Node* n, Wrap* W) {
+int typefunc(Wrap* W) {
+    W->pull();
+    printf("hi from typefunc\n");
+    return 1;
+}
+int nothingfunc(Wrap* W) {
+    W->pull();
+    printf("hi from nothingfunc\n"); return 1;
+}
+int stringfunc(Wrap* W) {
+    W->pull(); 
     string s = *(string*) W->pull()->val;
     printf("%s\n", s.c_str());
-    return n;
+    return 1;
 }
-Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
-Maybe<Node*> bangfunc(Node* n, Wrap* W) {
+int literalfunc(Wrap* W) {W->pull(); return 1;}
+int bangfunc(Wrap* W) {
+    W->pull(); 
     Node* m = W->peek();
     if (m->val == 1) {
         W->pull();
-        W->peek()->gettype()->f(W->peek(), W);
+        W->peek()->exec(W);
     }
     else {
         W->push(new Node("", tbang))->val = m->val-1;;
     }
-    return n;
+    return 1;
 }
-Maybe<Node*> execfunc(Node* n, Wrap* W) {return n->f(n, W);}
-Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
+int execfunc(Wrap* W) {return W->peek()->f(W);}
+int arrayfunc(Wrap* W) {
+    Node* n = W->pull(); 
     W->pull();
     Node* m = W->peek();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
         if (W->peek()->gettype() != tarray) {
-            W->peek()->gettype()->f(W->peek(), W);
+            W->peek()->exec(W);
         }
     }
-    return n;
+    return 1;
 }
-Maybe<Node*> addnode(Node* n, Wrap* W) {
-    W->pull();
+int addnode(Wrap* W) {
+    W->pull(2);
     word w = W->pull()->val+W->pull()->val;
     W->push(new Node("", tliteral))->val = w;
-    return n;
+    return 1;
 }
-Maybe<Node*> BREAKPOINT(Node* n, Wrap* W) {
-    W->pull();
+int BREAKPOINT(Wrap* W) {
+    W->pull(2);
     if (W->peek()->gettype() == tstring) {
         string s = *(string*) W->pull()->val;
         printf("[\033[31mBREAK \033[35;1m%s\033[0m:%s]\n", s.c_str(), W->t->str().c_str());
-        return n;
+        return 1;
     }
     printf("[\033[31mBREAK \033[0m:%s]\n", W->t->str().c_str());
-    return n;
+    return 1;
 }
-Maybe<Node*> loadfile(Node* n, Wrap* W) {
-    W->pull();
+int loadfile(Wrap* W) {
+    W->pull(2);
     Node* str = W->peek();
     FILE* FP = fopen(((string*) str->val)->c_str(), "r");
     string s;
@@ -99,93 +109,92 @@ Maybe<Node*> loadfile(Node* n, Wrap* W) {
     s = s.substr(0, s.size()-1);
     delete (string*) str->val;
     str->val = (word) new string(s);
-    return n;
+    return 1;
 }
-Maybe<Node*> savefile(Node* n, Wrap* W) {
-    W->pull();
+int savefile(Wrap* W) {
+    W->pull(2);
     string* str = (string*) W->pull()->val;
     FILE* FP = fopen(str->c_str(), "w");
     delete str;
     str = (string*) W->pull()->val;
     fwrite(str->c_str(), str->size(), 1, FP);
     delete str;
-    return n;
+    return 1;
 }
-Maybe<Node*> appendfile(Node* n, Wrap* W) {
-    W->pull();
+int appendfile(Wrap* W) {
+    W->pull(2); 
     string* str = (string*) W->pull()->val;
     FILE* FP = fopen(str->c_str(), "a");
     delete str;
     str = (string*) W->pull()->val;
     fwrite(str->c_str(), str->size(), 1, FP);
     delete str;
-    return n;
+    return 1;
 }
-Maybe<Node*> splitat(Node* n, Wrap* W) {
-    W->pull();
+int splitat(Wrap* W) {
+    W->pull(2); 
     word w = W->pull()->val;
     string* str = (string*) W->peek()->val;
     W->push(new Node("", tstring))->val = (word) new string(str->substr(w));
     W->peek(1)->val = (word) new string(str->substr(0, w));
     delete str;
-    return n;
+    return 1;
 }
-Maybe<Node*> swapnode(Node* n, Wrap* W) {
-    W->pull();
+int swapnode(Wrap* W) {
+    W->pull(2); 
     word a = W->pull()->val;
     W->t->swapi(a);
-    return n;
+    return 1;
 }
-Maybe<Node*> execif(Node* n, Wrap* W) {
-    W->pull();
+int execif(Wrap* W) {
+    W->pull(2);
     if (W->peek(1)->val != 0) {
-        n = W->pull();
-        n->gettype()->f(n, W);
+        W->pull()->exec(W);
     }
-    else {W->pull(); W->pull();}
-    return n;
+    else {W->pull(2);}
+    return 1;
 }
-Maybe<Node*> assign(Node* n, Wrap* W) {
-    W->pull();
+int assign(Wrap* W) {
+    W->pull(2);
     string* s = (string*) W->pull()->val;
     W->peek(0)->name = *s;
     (*W->t)[*s] = W->pull();
-    return n;
+    return 1;
 }
-Maybe<Node*> link(Node* n, Wrap* W) {
-    W->pull();
+int link(Wrap* W) {
+    W->pull(2);
     W->peek(1)->val = (word) W->peek(0);
-    W->pull(); W->pull();
-    return n;
+    W->pull(2);
+    return 1;
 }
-Maybe<Node*> lunk(Node* n, Wrap* W) {
-    W->pull();
+int lunk(Wrap* W) {
+    W->pull(2); 
     Node* u = W->pull();
     W->push((Node*) u->val);
-    return n;
+    return 1;
 }
-Maybe<Node*> setval(Node* n, Wrap* W) {
-    W->pull();
+int setval(Wrap* W) {
+    W->pull(2);
     W->peek(1)->val = W->peek(0)->val;
     W->pull();
-    return n;
+    return 1;
 }
-Maybe<Node*> clone(Node* n, Wrap* W) {
-    W->pull();
+int clone(Wrap* W) {
+    W->pull(2);
     W->push(new Node(*W->pull()));
-    return n;
+    return 1;
 }
-Maybe<Node*> stringconcat(Node* n, Wrap* W) {
-    W->pull();
+int stringconcat(Wrap* W) {
+    W->pull(2); 
     string* a = (string*) W->pull()->val;
     string* b = (string*) W->peek()->val;
     W->peek()->val = (word) new string(*b+*a);
     delete a;
     delete b;
-    return n;
+    return 1;
 }
-Maybe<Node*> includefile(Node* n, Wrap* W) {
-    W->pull();
+int includefile(Wrap* W) {
+    W->pull(2); 
     Node* str = W->pull();
     FILE* FP = fopen(((*(string*) str->val)+".qfj").c_str(), "r");
     string s;
@@ -203,29 +212,28 @@ Maybe<Node*> includefile(Node* n, Wrap* W) {
         m = T->parse();
         if (!m) {return Fail<Node*>(m);}
     }
-    return n;
+    return 1;
 }
-Maybe<Node*> runsystem(Node* n, Wrap* W) {
-    W->pull();
+int runsystem(Wrap* W) {
+    W->pull(2);
     string* str = (string*) W->pull()->val;
     system(str->c_str());
-    return n;
+    return 1;
 }
-Maybe<Node*> fjpull(Node* n, Wrap* W) {
-    W->pull();
-    W->pull();
-    return n;
+int fjpull(Wrap* W) {
+    W->pull(3); 
+    return 1;
 }
-Maybe<Node*> fjpush(Node* n, Wrap* W) {
-    W->pull();
+int fjpush(Wrap* W) {
+    W->pull(2); 
     W->push(W->peek(W->pull()->val));
-    return n;
+    return 1;
 }
-Maybe<Node*> entype(Node* n, Wrap* W) {
-    W->pull();
+int entype(Wrap* W) {
+    W->pull(2);
     W->peek(1)->parents.push_back(W->peek(0));
-    W->pull(); W->pull();
-    return n;
+    W->pull(2);
+    return 1;
 }
 int errorexit(Maybe<string> m, string s) {
     printf("%s\n", m.str(s).c_str());
@@ -276,11 +284,10 @@ int main(int argc, char** argv) {
     Maybe<string> m = T->parse();
     while (m && !T->isempty()) {
         m = T->parse();
-        if (!m) {
-            return errorexit(m, s);
-        }
+        if (!m) {return errorexit(m, s);}
     }
     printf("\033[0m%s\n", W->t->str().c_str());
+
     Node::deleteall();
     delete T;
     Wrap* w = W;

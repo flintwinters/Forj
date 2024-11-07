@@ -37,7 +37,7 @@ private:
 public:
     int sp = -1; // stack pointer
     Stack() {}
-    T pull() {return s[sp--];}
+    T pull(int i = 1) {return s[(sp -= i)+1];}
     T push(T t) {
         sp++;
         if (sp >= s.size()) {s.push_back(t);}
@@ -58,7 +58,7 @@ public:
 class Wrap;
 class Node;
 // function type for execution of nodes.
-typedef Maybe<Node*>(*func)(Node*, Wrap*);
+typedef int(*func)(Wrap*);
 // Prim types.
 // Want to replace these in-lang eventually
 Node* ttype;
@@ -100,6 +100,7 @@ public:
     }
     Node* type(int i) {return parents[parents.size()-i-1];}
     Node* gettype() {return type(0);}
+    int exec(Wrap* W);
     // Search all parentss for `s`
     Maybe<Node*> global(string s) {
         if (in(s)) {return (*this)[s];}
@@ -140,8 +141,13 @@ public:
     // Pass functions to the current node
     Node* peek(int i = 0) {return t->peek(i);}
     Node* push(Node* n) {return t->push(n);}
-    Node* pull() {return t->pull();}
+    Node* pull(int i = 1) {return t->pull(i);}
 };
+
+int Node::exec(Wrap* W) {
+    W->push(this);
+    return gettype()->f(W);
+}
 
 // Parser class
 class Text : public Stack<string> {
@@ -234,7 +240,7 @@ Maybe<string> Text::final(string s) {
     else {W->push(m);}
     return peek();
 }
-Maybe<Node*> arrayfunc(Node* n, Wrap* W);
+int arrayfunc(Node* n, Wrap* W);
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
@@ -265,8 +271,7 @@ Maybe<string> Text::parse() {
         pull();
         if (i) {W->push(new Node(peek(), tbang))->val = i;}
         else {
-            Node* n = W->peek();
-            n->gettype()->f(n, W);
+            W->peek()->exec(W);
         }
         W->searching = false;
         return s;
