@@ -49,9 +49,13 @@ Maybe<Node*> stringfunc(Node* n, Wrap* W) {
 }
 Maybe<Node*> literalfunc(Node* n, Wrap* W) {return n;}
 Maybe<Node*> bangfunc(Node* n, Wrap* W) {
-    if (W->peek()->val-- == 1) {
+    word w = W->peek()->val;
+    if (w == 1) {
         W->pull();
         W->peek()->gettype()->f(W->peek(), W);
+    }
+    else {
+        W->push(Node::New("", tbang, W->t))->val = w-1;
     }
     return n;
 }
@@ -70,6 +74,26 @@ Maybe<Node*> arrayfunc(Node* n, Wrap* W) {
 Maybe<Node*> addnode(Node* n, Wrap* W) {
     W->pull();
     word w = W->pull()->val+W->pull()->val;
+    W->push(Node::New("", tliteral, W->t))->val = w;
+    return n;
+}
+Maybe<Node*> subnode(Node* n, Wrap* W) {
+    W->pull();
+    word w = W->peek(1)->val-W->peek(0)->val;
+    W->pull(); W->pull();
+    W->push(Node::New("", tliteral, W->t))->val = w;
+    return n;
+}
+Maybe<Node*> mulnode(Node* n, Wrap* W) {
+    W->pull();
+    word w = W->pull()->val*W->pull()->val;
+    W->push(Node::New("", tliteral, W->t))->val = w;
+    return n;
+}
+Maybe<Node*> divnode(Node* n, Wrap* W) {
+    W->pull();
+    word w = W->peek(1)->val/W->peek(0)->val;
+    W->pull(); W->pull();
     W->push(Node::New("", tliteral, W->t))->val = w;
     return n;
 }
@@ -135,7 +159,7 @@ Maybe<Node*> swapnode(Node* n, Wrap* W) {
 Maybe<Node*> execif(Node* n, Wrap* W) {
     W->pull();
     if (W->peek(1)->val != 0) {
-        n = W->pull();
+        n = W->peek();
         n->gettype()->f(n, W);
     }
     else {W->pull(); W->pull();}
@@ -263,6 +287,9 @@ int main(int argc, char** argv) {
     W->t->addvar("set",         texec)->f = setval;
     W->t->addvar("clone",       texec)->f = clone;
     W->t->addvar("+",           texec)->f = addnode;
+    W->t->addvar("-",           texec)->f = subnode;
+    W->t->addvar("*",           texec)->f = mulnode;
+    W->t->addvar("/",           texec)->f = divnode;
     tliteral->addvar("+", texec)->f = addnode;
     W->t->addvar("system",      texec)->f = runsystem;
     W->t->addvar("pull",        texec)->f = fjpull;

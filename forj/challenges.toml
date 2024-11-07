@@ -1,3 +1,7 @@
+[one]
+challenge = "1"
+result = "1"
+
 [basic]
 challenge = "0 1 2"
 result = "2 1 0"
@@ -20,7 +24,7 @@ result = "9 1"
 
 [execiftrue]
 challenge = "1 [4 5 6 +] ?!"
-result = "11 4"
+result = "11 4 1"
 
 [execiffalse]
 challenge = "0 [4 5 6 +] ?!"
@@ -68,7 +72,7 @@ challenge = "[1 2 3 + [4 5 +] !!] !"
 result = "9 5 1"
 
 [triple]
-challenge = "[1 2 3 + [4 5 +] !!!] !! ! !"
+challenge = "[1 2 3 + [4 5 +] breakpoint !!! ] !! ! !"
 result = "9 5 1"
 
 [depth4]
@@ -100,8 +104,12 @@ challenge = "1 2 3 [pull pull]!"
 result = "1"
 
 [condpull]
-challenge = "1 2 1 [pull]?!"
+challenge = "1 2 1 [pull pull]?!"
 result = "1"
+
+[condpull2]
+challenge = "1 2 1 pull ?!"
+result = "2 1"
 
 [addclosure]
 challenge = """
@@ -146,7 +154,20 @@ challenge = """
 """
 result = "4 4 4 4"
 
+[fib]
+challenge = """
+  [[0 push 2 swap]!! +!!] "fib" assign!
+  1 1
+  fib! fib! fib! fib! fib! 
+"""
+result = "13 8"
 
-# [askfornum]
-# challenge = ":\"hi\" hi:2"
-# result = "2"
+[factorial]
+challenge = """
+  :"factorial"
+  [breakpoint [0 push 1 -]!! [factorial [breakpoint] !!! *] ?!!] "factorial" assign!
+  factorial array entype!
+  5 factorial!
+  factorial
+"""
+result = ""
