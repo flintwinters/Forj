@@ -46,7 +46,9 @@ public:
         return t;
     }
     T peek(int i = 0) {return s[sp-i];}
-    void under(T t) {s.insert(s.begin(), t);}
+    void under(T t) {
+        s.insert(s.begin(), t);
+    }
     void swapi(int i = 0) {
         T b = peek(i);
         s[sp-i] = peek();
@@ -67,6 +69,7 @@ Node* tnothing;
 Node* tstring;
 Node* tliteral;
 Node* tarray;
+Node* tmacro;
 Node* tbang;
 Node* texec;
 // Tree datastructure.
@@ -106,19 +109,21 @@ public:
 
     }
     int exec(Wrap* W);
-    // Search all parentss for `s`
-    Maybe<Node*> global(string s) {
+    // Search all parents for `s`
+    Maybe<Node*> search(string s) {
         if (in(s)) {return (*this)[s];}
-        for (Node* n : parents) {
-            if (!n) {continue;}
-            Maybe<Node*> m = n->getvar(s);
-            if (m) {return m;}
+        for (Node* p : parents) {
+            if (!p) {continue;}
+            Maybe<Node*> m = p->getvar(s);
+            if (m) {
+                return m;
+            }
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
     string str();
 };
-// "Thread" of execution
+// "Line" of execution
 // tracks the path of the current scope
 class Wrap {
 public:
@@ -133,12 +138,14 @@ public:
     Wrap* pullscope() {Wrap* w = prev; delete this; return w;}
 
     Maybe<Node*> global(string s) {
-        Maybe<Node*> m = t->global(s);
+        Maybe<Node*> m = t->search(s);
         if (m) {return m;}
         if (prev) {return prev->global(s);}
         return m;
     }
-    Maybe<Node*> search(string s) {return (searching) ? t->global(s) : global(s);}
+    Maybe<Node*> search(string s) {
+        return (searching) ? t->search(s) : global(s);
+    }
     int scopedepth() {
         if (prev) {return 1+prev->scopedepth();}
         return 1;
@@ -250,7 +257,10 @@ Maybe<string> Text::final(string s) {
     }
     Maybe<Node*> m = W->search(s);
     if (!m) {return Fail<string>(m, idx, s.size());}
-    if (W->searching) {W = W->pullscope(); W->push(m);}
+    if (W->searching) {
+        W = W->pullscope();
+        W->push(m);
+    }
     else {W->push(m);}
     return peek();
 }
@@ -258,7 +268,7 @@ int arrayfunc(Node* n, Wrap* W);
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
-    t = splitfind(":[](!\"`");
+    t = splitfind(":[]{}(!\"`");
     if (!t) {
         Maybe<string> m = final(peek());
         if (m) {return pull();}
@@ -288,12 +298,12 @@ Maybe<string> Text::parse() {
         W->searching = false;
         return s;
     }
-    else if (t == '[') {
+    else if (t == '[' || t == '{') {
         Node* n = W->t;
         if (W->searching) {W = W->pullscope()->pushscope(n);}
-        else {W = W->pushscope(new Node("", tarray));}
+        else {W = W->pushscope(new Node("", (t == '[') ? tarray : tmacro));}
     }
-    else if (t == ']') {
+    else if (t == ']' || t == '}') {
         Node* n = W->t;
         (W = W->pullscope())->push(n);
     }

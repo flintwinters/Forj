@@ -24,6 +24,7 @@ template <typename T> string Stack<T>::str(string (tostr)(T)) {
 
 string Node::str() {
     return Stack::str([](Node* n)->string {
+        if (n->gettype() == tmacro) {return "{"+n->str()+"}";}
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == texec)    {return "\033[31m" + n->name + "\033[0m";}
         if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
@@ -43,6 +44,11 @@ string Node::str() {
 int typefunc(Wrap* W) {
     W->pull();
     printf("hi from typefunc\n");
+    return 1;
+}
+int contextfunc(Wrap* W) {
+    W->pull();
+    W->push((Node*) W->pull()->val)->exec(W);
     return 1;
 }
 int nothingfunc(Wrap* W) {
@@ -280,6 +286,7 @@ int main(int argc, char** argv) {
     Wrap* W = new Wrap(Global, 0);
 
     (ttype      = W->t->addvar("type",      0))->f = typefunc;
+    (tmacro     = W->t->addvar("macro",     0))->f = arrayfunc;
     (tnothing   = W->t->addvar("nothing",   ttype))->f = nothingfunc;
     (tstring    = W->t->addvar("string",    ttype))->f = stringfunc;
     (tliteral   = W->t->addvar("literal",   ttype))->f = literalfunc;
@@ -299,8 +306,8 @@ int main(int argc, char** argv) {
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("assign",      texec)->f = assign;
-    W->t->addvar("<link",       texec)->f = link;
-    W->t->addvar(">lunk",       texec)->f = lunk;
+    W->t->addvar("<-",          texec)->f = link;
+    W->t->addvar("->",          texec)->f = lunk;
     W->t->addvar("set",         texec)->f = setval;
     W->t->addvar("clone",       texec)->f = clone;
     W->t->addvar("+",           texec)->f = addnode;
