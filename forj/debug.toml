@@ -2,6 +2,7 @@ breakpoints = [
     "BREAKPOINT",
     "errorexit",
     "forj.cpp:debug",
+    "forj.cpp:parse",
     # "forj.cpp:exec",
     # "8",
     # "forj.cpp:265",
@@ -9,7 +10,7 @@ breakpoints = [
     # "forj.cpp:95",
 ]
 displays = [
-    "*W->peek(0)",
+    # "*W->peek(0)",
     # "lines",
     # "i",
 ]

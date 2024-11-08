@@ -264,7 +264,10 @@ int errorexit(Maybe<string> m, string s) {
     return 1;
 }
 int main(int argc, char** argv) {
-    if (argc != 2) {printf("Provide a filename\n"); return 1;}
+    if (argc != 2) {
+        printf("Provide a filename\n");
+        return 1;
+    }
     FILE* FP = fopen(argv[1], "r");
     string s;
     while (!feof(FP)) {s += fgetc(FP);}
@@ -283,6 +286,7 @@ int main(int argc, char** argv) {
     (tarray     = W->t->addvar("array",     ttype))->f = arrayfunc;
     (tbang      = W->t->addvar("bang",      ttype))->f = bangfunc;
     (texec      = W->t->addvar("exec",      ttype))->f = execfunc;
+
     W->t->addvar("breakpoint",  texec)->f = BREAKPOINT;
     W->t->addvar("debug",       texec)->f = DEBUG;
     W->t->addvar("loadfile",    texec)->f = loadfile;

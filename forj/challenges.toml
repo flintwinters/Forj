@@ -228,8 +228,5 @@ challenge = """
 result = "120"
 
 [rv64]
-challenge = """
-`.quad t0`
-
-"""
+challenge = "`.quad t0`"
 result = "\".quad t0\""

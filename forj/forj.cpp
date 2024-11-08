@@ -270,7 +270,7 @@ Maybe<string> Text::parse() {
         if (s == "") {W = W->pushscope(W->t);}
         else {
             Maybe<Node*> m = W->search(s);
-            if (!m) {return Fail<string>(m, idx) + " For subscope of '" + m->name + "'";}
+            if (!m) {return Fail<string>(m, idx) + " For subscope of '" + s + "'";}
             if (!W->searching) {W = W->pushscope(m);}
             W->t = m;
         }
@@ -284,9 +284,7 @@ Maybe<string> Text::parse() {
         split(i);
         pull();
         if (i) {W->push(new Node(peek(), tbang))->val = i;}
-        else {
-            W->peek()->exec(W);
-        }
+        else {W->peek()->exec(W);}
         W->searching = false;
         return s;
     }

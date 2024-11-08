@@ -1,8 +1,9 @@
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
-all:
+all: fj
 	cd rv64 && \
+	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
 		linker.ld \
@@ -28,6 +29,7 @@ all:
 
 rv:
 	cd rv64 && \
+	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
 		linker.ld \
@@ -50,19 +52,19 @@ rv:
 
 fjrun:
 	cd forj && \
-	g++ -g main.cpp -o forjlang && \
-	./forjlang test.qfj
+	g++ -g main.cpp -o fj && \
+	gdb -q -ex "source `pwd`/pyg.py" --args ./fj test.qfj 
+
 
 challenge:
 	cd forj && \
-	g++ -g main.cpp -o forjlang && \
+	g++ -g main.cpp -o fj && \
 	python3 challenge.py $(CHALLENGE) || \
-	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang challenge
+	gdb -q -ex "source `pwd`/pyg.py" --args ./fj challenge
 
 fj:
 	cd forj && \
-	g++ -g main.cpp -o forjlang && \
-	gdb -q -ex "source `pwd`/pyg.py" --args ./forjlang test.qfj 
+	g++ -g main.cpp -o fj
 
 asm:
 	cd rv64 && \
