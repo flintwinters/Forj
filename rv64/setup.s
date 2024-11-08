@@ -11,6 +11,7 @@
 
 .global _start
 _start:
+ 
 # priv-isa-asciidoc_20240411.pdf
 #
 # timer interrupt setup:
@@ -42,6 +43,12 @@ _start:
 	# csrw pmpaddr1,t0
 	# li t0, 0x0f
 	# csrw pmpcfg1,t0
+
+	la a0, enterkernel
+	call virtualtophysical
+
+	# la a0, pagestart
+	# physicaltovirtual
 
 	sfence.vma x0, x0
 
@@ -98,6 +105,7 @@ virtualtophysical:
 # 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
 
 # a0 = virtual address
+# return a0 = physical address
 	la		t0, pagestart
 	
 	li 		t3, 30
@@ -123,39 +131,32 @@ v2ploop:
 	mv		a0, t0
 	ret
 
-physicaltovirtual:
-# a0 = virtual  address
-# a1 = physical address
-	la		t0, pagestart
+# physicaltovirtual:
+# # a0 = virtual  address
+# # a1 = physical address
+# 	la		t0, pagestart
 	
-	li		t2, 0xf
-	li 		t3, 30
-	li 		t4, 21
+# 	li		t2, 0xf
+# 	li 		t3, 30
+# 	li 		t4, 21
 
-p2vloop:
-	srl		t1, a0, t3
-	addi	t3, t3, -9
+# p2vloop:
+# 	srl		t1, a0, t3
+# 	addi	t3, t3, -9
 
-	andi	t1, t1, 0x1ff
-	slli	t1, t1, 3
+# 	andi	t1, t1, 0x1ff
+# 	slli	t1, t1, 3
 	
-	add		t0, t0, t1
-	lw		t1, 0(t0) # get the PTE
+# 	add		t0, t0, t1
+# 	lw		t1, 0(t0) # get the PTE
 
-	srli	a0, t1, 10
-	slli	a0, a0, 12
+# 	srli	a0, t1, 10
+# 	slli	a0, a0, 12
 
-	bne		t3, t4, p2vloop
+# 	bne		t3, t4, p2vloop
 	
-pageerror:
-	wfi
-
-kernelpagesetup:
-	la		t0, pagestart
-	srli	t1, t0, 2
-	addi	t1, t1, 0x401
-	sw		t1, 0(t0)
-	ret
+# pageerror:
+# 	wfi
 
 # 4. Otherwise, the PTE is valid. If pte.r=1 or pte.x=1, go to step 5. Otherwise, this PTE is a pointer to the
 # next level of the page table. Let i=i-1. If i<0, stop and raise a page-fault exception corresponding to
@@ -254,6 +255,7 @@ interrupts:
 	mret
 
 timerhandler:
+.include "rvkernel.s"
 	# add 30k to mtimecmp
 	li      t3, 0x2004000
 	ld      t2, 0(t3)
@@ -262,6 +264,10 @@ timerhandler:
 	sd		t2, 0(t3)
 
     mret
+
+.align 12
+mstack:
+.skip 4096,0
 
 # uart
 # https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
@@ -286,6 +292,7 @@ main:
 # 	j uartloop
 
 # nouart:
+
 	j main
 
 
@@ -302,19 +309,18 @@ main:
 # 63 62-61 60-54   53-28  27-19 18-10   9-8  7  6  5  4  3  2  1  0
 # N PBMT Reserved PPN[2] PPN[1] PPN[0] RSW  D  A  G  U  X  W  R  V
 # 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
-.align 12
-mstack:
-.skip 4096,0
+
 .align 12
 pagestart:
-.fill 2, 8, 0x0
-.quad 0x20000801
+.skip 16, 0
+.quad 0x20001001
 .align 12
 
-.quad 0x20000c01
+.quad 0x20001401
 .align 12
 
-.quad 0x2000000f
+.skip 16, 0
+.quad 0x2000080f
 .align 12
 
 .size	_start, .-_start

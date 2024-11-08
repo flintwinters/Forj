@@ -2,6 +2,7 @@
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
 all: kernel
+	echo $(CHALLENGE)
 	@cd rv64 && \
 	( \
 	qemu-system-riscv64 \
@@ -29,6 +30,8 @@ kernel: fj
 		-nostdlib \
 		setup.o \
 		-lgcc
+
+challenge: fjchall rvchall
 
 rvchall:
 	@cd rv64 && \
@@ -63,8 +66,8 @@ fjrun:
 	gdb -q -ex "source `pwd`/pyg.py" --args ./fj test.qfj 
 
 
-challenge:
-	cd forj && \
+fjchall:
+	@cd forj && \
 	g++ -g main.cpp -o fj && \
 	python3 challenge.py $(CHALLENGE) || \
 	gdb -q -ex "source `pwd`/pyg.py" --args ./fj challenge

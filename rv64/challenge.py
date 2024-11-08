@@ -13,10 +13,10 @@ def rungdb(challenge="default"):
         return f.read()
 
 def fail(name, s):
-    print(f"\033[31mFAIL : {name}\033[91;1m "+"─"*30+"\033[0m\n"+s)
+    print(f"\033[31mrv64 FAIL : {name}\033[91;1m "+"─"*30+"\033[0m\n"+s)
 
-def runos(v):
-    result = rungdb()
+def runos(k, v):
+    result = rungdb(k)
     if not result:
         return
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -33,13 +33,13 @@ def main():
     ret = 0
     failed = False
     for k, v in T.items():
-        s = runos(v)
+        s = runos(k, v)
         if s:
             fail(k, s)
             failed = True
 
     if not failed:
-        print("\033[92;1mall pass "+"─"*30+"\033[0m")
+        print("\033[92;1mrv64 all pass "+"─"*30+"\033[0m")
     return ret
 
 exit(main())

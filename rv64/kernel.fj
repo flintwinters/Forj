@@ -1,3 +1,26 @@
+`
+# generated with fj
+
+.macro push reg
+    addi sp, sp, 8
+	sd \reg, 0(sp)
+.endm
+
+.macro pull reg
+	ld \reg, 0(sp)
+	addi sp, sp, -8
+.endm
+
+.macro peek reg
+	ld \reg, 0(sp)
+.endm
+`
+"rvkernel.s" savefile!
+
 :"rvpush"
 :"rvpull"
 :"rvpeek"
+
+"push" rvpush <-!
+"pull" rvpush <-!
+"peek" rvpush <-!

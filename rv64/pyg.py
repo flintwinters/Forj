@@ -17,14 +17,14 @@ def connect(challenge="default"): # arbitrary default
         T = loads(f.read())
     challenging = bool(challenge)
     if challenging:
+        print(challenge)
         T = T[challenge]
         T["runs"] += "\nexit"
+        gdb.execute("set logging redirect")
     else:
         T = T["default"]
     def buildcmds(s, l):
         return s + " " + ("\n"+s+" ").join(l)
-    if challenging:
-        gdb.execute("set logging redirect")
     breaks   = buildcmds("b ", T["breakpoints"])
     displays = buildcmds("display ", T["displays"])
     gdb.execute(f"""

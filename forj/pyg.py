@@ -19,7 +19,8 @@ def connect(): # arbitrary default
     breaks   = buildcmds("b ", T["breakpoints"])
     displays = buildcmds("display ", T["displays"])
     gdb.execute(f"""
-    exec-file ./forjlang
+    set confirm off
+    exec-file ./fj
     b main
     run
     d

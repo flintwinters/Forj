@@ -1,48 +1,58 @@
 [default]
-breakpoints = [
-    "_start",
-    "enterkernel",
-    # "pageloop",
-    "main",
-    "mtrap",
-    # "virtualtophysical",
-    # "v2ploop",
-]
-displays = [
-    "/x $mstatus",
-    "/x $mtval",
-    # "/i $pc",
-    "/i $mepc",
-    "/x $mcause",
-    "/x $scause",
-    "/x $a0",
-    "/x $t0",
-    "/x $t1",
-    "/x $t2",
-    "/x $t3",
-    "/x $satp",
-    "*0x2004000",
-    "*0x200BFF8",
-    # "/xb 0x10000000", # uart regs
-    # "/xb 0x10000001", # uart regs
-    # "/xb 0x10000002", # uart regs
-    # "/xb 0x10000003", # uart regs
-    # "/xb 0x10000004", # uart regs
-    # "/xb 0x10000005"  # uart regs
-]
-runs = """"""
-result = [
-    "0x80000000"
-]
+    breakpoints = [
+        "_start",
+        "enterkernel",
+        # "pageloop",
+        # "main",
+        "mtrap",
+        # "virtualtophysical",
+        # "v2ploop",
+    ]
+    displays = [
+        "/x $sp",
+        "/x $mstatus",
+        "/x $mtval",
+        # "/i $pc",
+        "/i $mepc",
+        "/x $mcause",
+        "/x $scause",
+        "/x $a0",
+        "/x $t0",
+        "/x $t1",
+        "/x $t2",
+        "/x $t3",
+        "/x $satp",
+        "*0x2004000",
+        "*0x200BFF8",
+        # "/xb 0x10000000", # uart regs
+        # "/xb 0x10000001", # uart regs
+        # "/xb 0x10000002", # uart regs
+        # "/xb 0x10000003", # uart regs
+        # "/xb 0x10000004", # uart regs
+        # "/xb 0x10000005"  # uart regs
+    ]
+    runs = """"""
+    result = []
 
-[mtrap]
-breakpoints = [
-    "_start",
-]
-displays = [
-
-]
-runs = """"""
-result = [
-    "blah blah"
-]
+[timer]
+    breakpoints = [
+        "mtrap",
+    ]
+    displays = [
+        "/x $mcause",
+        "*0x2004000",
+        "*0x200BFF8",
+    ]
+    runs = """
+        c
+        c
+    """
+    result = [
+        "mcause = 0x8000000000000007",
+        "*0x2004000 = 50000",
+        "*0x200BFF8 = 50",
+        "*0x2004000 = 80000",
+        "*0x200BFF8 = 80",
+        "*0x2004000 = 110000",
+        "*0x200BFF8 = 110"
+    ]

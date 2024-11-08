@@ -113,11 +113,11 @@ challenge = "[ 1 [ 2 [ 3 [4] !!] !!] ] !"
 result = "[ !!  [ !!  [ 4 ]  3 ]  2 ]  1"
 
 [link]
-challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] <link !"
+challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] <- !"
 result = ""
 
 [storelink]
-challenge = ":\"hi\" hi [1 2 3] <link ! hi >lunk !"
+challenge = ":\"hi\" hi [1 2 3] <- ! hi -> !"
 result = "[ 3 2 1 ]"
 
 [pull0]
@@ -169,6 +169,28 @@ challenge = """
 """
 result = "3"
 
+[addclosure2]
+challenge = """
+  :"n" 
+  n literal entype!
+  1 2 [n:+] !
+"""
+result = "3"
+
+[implicit]
+challenge = """
+  :"n"
+  n literal entype!
+  n:[
+    {n +} "+" assign!
+  ] pull!
+  n 2 set! pull!
+  1 n:+!
+  10 n:+!
+  1 2 +!
+"""
+result = """3 12 3"""
+
 [clone]
 challenge = """
   :"n"
@@ -218,12 +240,12 @@ challenge = """
   factorial
   [
     0 push 1 -
-    [factorial >lunk] ?!!
+    [factorial ->] ?!!
     *
-  ] <link!
+  ] <-!
   factorial array entype!
 
-  1 5 factorial >lunk! !
+  1 5 factorial ->! !
 """
 result = "120"
 
