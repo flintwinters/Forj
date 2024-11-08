@@ -18,6 +18,8 @@ _start:
 # 63 62-38 37  36 35-34 33-32 31-23 22  21 20  19  18 17   16-15 14-13 12-11 10-9  8   7    6    5   4    3   2    1    0
 # SD WPRI MBE SBE SXL   UXL   WPRI TSR TW TVM MXR SUM MPRV  XS   FS    MPP   VS   SPP MPIE UBE SPIE WPRI MIE WPRI SIE WPRI
 # 1   25   1   1   2    2      9    1  1   1   1   1   1    2    2     2     2     1   1   1    1    1    1    1   1    1
+	la sp, mstack
+	
 	# enable global interrupts for m and s modes
 	# set previous privilege level to s
     li      t0, 0x0880
@@ -35,20 +37,13 @@ _start:
 	li t0, 0x0f
 	csrw pmpcfg0,t0
 
-	# li t0, -1
+	# la t0, pagestart
+	# slli t0, t0, 1
 	# csrw pmpaddr1,t0
-	# li t0, 0x1f
+	# li t0, 0x0f
 	# csrw pmpcfg1,t0
 
 	sfence.vma x0, x0
-
-	# call kernelpagesetup
-	li		a0, 0x80000198
-	call virtualtophysical
-
-	# delegate s interrupts to m
-    # li      t0, 0x20
-    # csrs    mideleg, t0
 
 	# set trap handler location
     la      t0, mtrap
@@ -151,8 +146,6 @@ p2vloop:
 	slli	a0, a0, 12
 
 	bne		t3, t4, p2vloop
-	
-
 	
 pageerror:
 	wfi
@@ -309,6 +302,9 @@ main:
 # 63 62-61 60-54   53-28  27-19 18-10   9-8  7  6  5  4  3  2  1  0
 # N PBMT Reserved PPN[2] PPN[1] PPN[0] RSW  D  A  G  U  X  W  R  V
 # 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
+.align 12
+mstack:
+.skip 4096,0
 .align 12
 pagestart:
 .fill 2, 8, 0x0

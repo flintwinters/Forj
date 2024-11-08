@@ -1,8 +1,23 @@
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
-all: fj
-	cd rv64 && \
+all: kernel
+	@cd rv64 && \
+	( \
+	qemu-system-riscv64 \
+		-s -S \
+		-machine virt \
+		-cpu rv64 \
+		-nographic \
+		-serial mon:stdio \
+		-bios none \
+		-kernel forjos & \
+	gdb-multiarch -l 2 -q forjos -x `pwd`/pyg.py -ex "py connect('$(CHALLENGE)')" \
+	) 
+	pkill -f qemu-system-riscv64
+
+kernel: fj
+	@cd rv64 && \
 	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
@@ -13,22 +28,14 @@ all: fj
 		-static \
 		-nostdlib \
 		setup.o \
-		-lgcc && \
-	( \
-	qemu-system-riscv64 \
-		-s -S \
-		-machine virt \
-		-cpu rv64 \
-		-nographic \
-		-serial mon:stdio \
-		-bios none \
-		-kernel forjos & \
-	gdb-multiarch -l 2 -q forjos -ex "source `pwd`/pyg.py" \
-	)
-	pkill -f qemu-system-riscv64
+		-lgcc
+
+rvchall:
+	@cd rv64 && \
+	python3 challenge.py
 
 rv:
-	cd rv64 && \
+	@cd rv64 && \
 	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -o setup.o &&\
 	riscv64-unknown-elf-gcc -T \
@@ -63,7 +70,7 @@ challenge:
 	gdb -q -ex "source `pwd`/pyg.py" --args ./fj challenge
 
 fj:
-	cd forj && \
+	@cd forj && \
 	g++ -g main.cpp -o fj
 
 asm:

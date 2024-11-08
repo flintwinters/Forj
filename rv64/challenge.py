@@ -7,13 +7,13 @@ with open("debug.toml", "r") as f:
     T = loads(f.read())
 
 def rungdb(challenge="default"):
-    sys = system(f"""cd .. && make CHALLENGE={challenge}""")
+    sys = system(f"""cd .. && make CHALLENGE={challenge} > /dev/null 2>&1""")
     if sys: return
     with open("gdb.txt", "r") as f:
         return f.read()
 
 def fail(name, s):
-    print(f"\033[31mFAIL : {name}\033[91;1m "+"─"*30+"\033[0m\n")
+    print(f"\033[31mFAIL : {name}\033[91;1m "+"─"*30+"\033[0m\n"+s)
 
 def runos(v):
     result = rungdb()
@@ -23,9 +23,11 @@ def runos(v):
     with open("gdb.txt", "r") as f:
         s = f.read()
         st = ansi_escape.sub('', s).strip()
-        r = v['result'].strip()
-        if r not in st:
-            return "expected:\n"+v["result"]+"\nactual:\n"+s
+        results = v['result']
+        for r in results:
+            r = r.strip()
+            if r not in st:
+                return r
 
 def main():
     ret = 0

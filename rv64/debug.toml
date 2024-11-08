@@ -1,7 +1,9 @@
+[default]
 breakpoints = [
     "_start",
     "enterkernel",
     # "pageloop",
+    "main",
     "mtrap",
     # "virtualtophysical",
     # "v2ploop",
@@ -27,4 +29,20 @@ displays = [
     # "/xb 0x10000003", # uart regs
     # "/xb 0x10000004", # uart regs
     # "/xb 0x10000005"  # uart regs
+]
+runs = """"""
+result = [
+    "0x80000000"
+]
+
+[mtrap]
+breakpoints = [
+    "_start",
+]
+displays = [
+
+]
+runs = """"""
+result = [
+    "blah blah"
 ]

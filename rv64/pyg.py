@@ -3,25 +3,28 @@ from sys import argv
 import gdb
 
 # https://stackoverflow.com/questions/2290842/gdb-python-scripting-where-has-parse-and-eval-gone
-def parseandeval(s):
-    gdb.execute("set logging redirect on")
-    gdb.execute("set logging enabled on")
-    gdb.execute("print " + s)
-    gdb.execute("set logging enabled off")
-    return gdb.history(0)
+# def parseandeval(s):
+#     gdb.execute("set logging redirect on")
+#     gdb.execute("set logging enabled on")
+#     gdb.execute("print " + s)
+#     gdb.execute("set logging enabled off")
+#     return gdb.history(0)
 
 def connect(challenge="default"): # arbitrary default
     port = 1234
     T = []
     with open("debug.toml", "r") as f:
         T = loads(f.read())
-    if challenge:
+    challenging = bool(challenge)
+    if challenging:
         T = T[challenge]
         T["runs"] += "\nexit"
     else:
         T = T["default"]
     def buildcmds(s, l):
         return s + " " + ("\n"+s+" ").join(l)
+    if challenging:
+        gdb.execute("set logging redirect")
     breaks   = buildcmds("b ", T["breakpoints"])
     displays = buildcmds("display ", T["displays"])
     gdb.execute(f"""
