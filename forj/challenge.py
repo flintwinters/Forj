@@ -18,6 +18,8 @@ def runforj(v):
     with open("challengeresult", "r") as f:
         s = f.read()
         st = ansi_escape.sub('', s).strip()
+        if 'result' not in v:
+            return "No result found"
         r = v['result'].strip()
         if r != st:
             return "expected:\n"+v["result"]+"\nactual:\n"+s

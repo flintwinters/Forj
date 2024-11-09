@@ -2,7 +2,6 @@
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
 all: kernel
-	echo $(CHALLENGE)
 	@cd rv64 && \
 	( \
 	qemu-system-riscv64 \

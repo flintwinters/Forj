@@ -27,7 +27,10 @@ string Node::str() {
         if (n->gettype() == tmacro) {return "{"+n->str()+"}";}
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == texec)    {return "\033[31m" + n->name + "\033[0m";}
-        if (n->gettype() == tstring)  {return "\033[32m\"" + *(string*) n->val + "\"\033[0m";}
+        if (n->gettype() == tstring)  {
+            if (!n->val) {return "\033[32m0\033[0m";}
+            return "\033[32m\"" + *(string*) n->val + "\"\033[0m";
+        }
         if (n->gettype() == tbang)    {
             string s = "!";
             for (int i = 0; i < n->val; i++) {
@@ -57,8 +60,6 @@ int nothingfunc(Wrap* W) {
 }
 int stringfunc(Wrap* W) {
     W->pull(); 
-    string s = *(string*) W->pull()->val;
-    printf("%s\n", s.c_str());
     return 1;
 }
 int literalfunc(Wrap* W) {W->pull(); return 1;}
@@ -191,6 +192,12 @@ int assign(Wrap* W) {
     (*W->t)[*s] = W->pull();
     return 1;
 }
+int printfunc(Wrap* W) {
+    W->pull(2);
+    string s = *(string*) W->pull()->val;
+    printf("%s\n", s.c_str());
+    return 1;
+}
 int link(Wrap* W) {
     W->pull(2);
     W->peek(1)->val = (word) W->peek(0);
@@ -262,7 +269,7 @@ int fjpush(Wrap* W) {
 int entype(Wrap* W) {
     W->pull(2);
     W->peek(1)->parents.push_back(W->peek(0));
-    W->pull(2);
+    W->pull(1);
     return 1;
 }
 int errorexit(Maybe<string> m, string s) {
@@ -306,18 +313,18 @@ int main(int argc, char** argv) {
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("assign",      texec)->f = assign;
+    W->t->addvar("print",       texec)->f = printfunc;
     W->t->addvar("<-",          texec)->f = link;
     W->t->addvar("->",          texec)->f = lunk;
-    W->t->addvar("set",         texec)->f = setval;
+    W->t->addvar("=",           texec)->f = setval;
     W->t->addvar("clone",       texec)->f = clone;
-    W->t->addvar("+",           texec)->f = addnode;
-    W->t->addvar("-",           texec)->f = subnode;
-    W->t->addvar("*",           texec)->f = mulnode;
-    W->t->addvar("/",           texec)->f = divnode;
-    tliteral->addvar("+", texec)->f = addnode;
+    tliteral->addvar("+", texec)->f = W->t->addvar("+", texec)->f = addnode;
+    tliteral->addvar("-", texec)->f = W->t->addvar("-", texec)->f = subnode;
+    tliteral->addvar("*", texec)->f = W->t->addvar("*", texec)->f = mulnode;
+    tliteral->addvar("/", texec)->f = W->t->addvar("/", texec)->f = divnode;
     W->t->addvar("system",      texec)->f = runsystem;
-    W->t->addvar("pull",        texec)->f = fjpull;
-    W->t->addvar("push",        texec)->f = fjpush;
+    W->t->addvar(",",        texec)->f = fjpull;
+    W->t->addvar(";",        texec)->f = fjpush;
 
     Text* T = new Text(s, W);
     Maybe<string> m = T->parse();

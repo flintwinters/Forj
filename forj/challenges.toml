@@ -47,28 +47,28 @@ challenge = "\"hello\" (comment test) \"hi\" concat!"
 result = "\"hellohi\""
 
 [newvar]
-challenge = ":\"hi\" hi"
+challenge = ":\"hi\""
 result = "[]"
 
 [vartest]
 challenge = ":\"hi\" [[hi]]!"
-result = "[ [] ]"
+result = "[ [] ]  []"
 
 [depthvar1]
-challenge = ":\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ] hi:test"
-result = "[] [ 6 5 4 3 2 1 ]"
+challenge = ":\"hi\" ,! hi:[ 1 2 3 :\"test\" 4 5 6 ] hi:test"
+result = "[] [ 6 5 4 [] 3 2 1 ]"
 
 [depthvar2]
-challenge = """:\"hi\" hi:[ 1 2 3 4 5 6 ] hi"""
+challenge = """:\"hi\" ,! hi:[ 1 2 3 4 5 6 ] hi"""
 result = "[ 6 5 4 3 2 1 ] [ 6 5 4 3 2 1 ]"
 
 [depthvar3]
 challenge = """
-  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
+  :\"hi\" ,! hi:[ 1 2 3 :\"test\" 4 5 6 ]
   hi:test:[ :\"okay\" ]
   hi:test:okay
 """
-result = "[] [] [ 6 5 4 3 2 1 ]"
+result = "[] [ [] ] [ 6 5 4 [ [] ] 3 2 1 ]"
 
 [depthvar3fail]
 challenge = """
@@ -114,91 +114,85 @@ result = "[ !!  [ !!  [ 4 ]  3 ]  2 ]  1"
 
 [link]
 challenge = ":\"hi\" hi [1 2 3 + [4 5 +] !!!] <- !"
-result = ""
+result = "[]"
 
 [storelink]
 challenge = ":\"hi\" hi [1 2 3] <- ! hi -> !"
-result = "[ 3 2 1 ]"
+result = "[ 3 2 1 ]  []"
 
 [pull0]
-challenge = "1 pull!"
+challenge = "1 ,!"
 result = ""
 
 [pull]
-challenge = "1 2 3 pull!"
+challenge = "1 2 3 ,!"
 result = "2 1"
 
 [twicepull]
-challenge = "1 2 3 [pull pull]!"
+challenge = "1 2 3 [, ,]!"
 result = "1"
 
 [condpull]
-challenge = "1 2 1 [pull pull]?!"
+challenge = "1 2 1 [, ,]?!"
 result = "1"
 
 [condpull2]
-challenge = "1 2 1 pull ?!"
+challenge = "1 2 1 , ?!"
 result = "2 1"
 
 [verboseclosure]
 challenge = """
-  :"n"
-  n literal entype!
-  n 5 set!
+  :"n" literal entype!
+  5 =!
   [n [literal:+]!!] "ok" assign!
   1 ok!
   2 ok!
-  n 7 set!
+  n 7 =!
   3 ok!
 """
 result = "10 7 7 6 7"
 
 [literaladd]
 challenge = """
-  :"n"
-  n literal entype!
+  :"n" literal entype! ,!
   1 2 literal:+ !
 """
 result = "3"
 
 [addclosure]
 challenge = """
-  :"n" 
-  n literal entype!
+  :"n" literal entype! ,!
   1 2 n:+ !
 """
 result = "3"
 
 [addclosure2]
 challenge = """
-  :"n" 
-  n literal entype!
+  :"n" literal entype! ,!
   1 2 [n:+] !
 """
 result = "3"
 
 [implicit]
 challenge = """
-  :"n"
-  n literal entype!
+  :"n" literal entype!
   n:[
     {n +} "+" assign!
-  ] pull!
-  n 2 set! pull!
+  ] ,!
+  n 2 =! ,!
   1 n:+!
   10 n:+!
   1 2 +!
 """
-result = """3 12 3"""
+result = """3 12 3 2"""
 
 [clone]
 challenge = """
-  :"n"
-  n literal entype!
-  n 4 set! clone!
-  n n 9 +! set!
+  :"n" literal entype!
+  4 =! clone!
+  n n 9 +! =!
   n (n = 4)
-  2 push! (clone = 13)
+  2 ;! (clone = 13)
 """
 result = "4 13 13 4"
 
@@ -206,7 +200,6 @@ result = "4 13 13 4"
 challenge = """
   1 "a" assign !
   a literal entype!
-  a
 """
 result = "1"
 
@@ -214,21 +207,21 @@ result = "1"
 challenge = """
   :"n" :"m"
   m:"z"
-  m:z literal entype!
-  m:z 2 set!
+  literal entype!
+  2 =!
   m:z
   m:z clone! "b" assign!
   (the clone isn't deep:
     references to variables are not copied)
   m clone! "o" assign!
-  o:z o:z 2 +! set!
+  o:z o:z 2 +! =!
   o:z b
 """
-result = "2 4 4 4 4"
+result = "2 4 4 4 4 [] []"
 
 [fib]
 challenge = """
-  [[0 push 2 swap]!! +!!] "fib" assign!
+  [[0 ; 2 swap]!! +!!] "fib" assign!
   1 1
   fib! fib! fib! fib! fib!
 """
@@ -237,13 +230,12 @@ result = "13 8"
 [factorial]
 challenge = """
   :"factorial"
-  factorial
   [
-    0 push 1 -
+    0 ; 1 -
     [factorial ->] ?!!
     *
   ] <-!
-  factorial array entype!
+  factorial array entype! ,!
 
   1 5 factorial ->! !
 """
@@ -252,3 +244,14 @@ result = "120"
 [rv64]
 challenge = "`.quad t0`"
 result = "\".quad t0\""
+
+[pusharray]
+challenge = """
+  :"arr"
+  array entype!
+  ["hi"] <-!
+  arr:[4 5 6] ,!
+  arr:[1 2] ,!
+  arr:[,! ;!]
+"""
+result = "[ 5 6 5 4 ]"

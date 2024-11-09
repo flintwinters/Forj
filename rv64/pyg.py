@@ -17,7 +17,6 @@ def connect(challenge="default"): # arbitrary default
         T = loads(f.read())
     challenging = bool(challenge)
     if challenging:
-        print(challenge)
         T = T[challenge]
         T["runs"] += "\nexit"
         gdb.execute("set logging redirect")

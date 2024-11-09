@@ -7,7 +7,7 @@ with open("debug.toml", "r") as f:
     T = loads(f.read())
 
 def rungdb(challenge="default"):
-    sys = system(f"""cd .. && make CHALLENGE={challenge} > /dev/null 2>&1""")
+    sys = system(f"""cd .. && make CHALLENGE={challenge} > /dev/null 2>&1;""")
     if sys: return
     with open("gdb.txt", "r") as f:
         return f.read()
@@ -40,6 +40,7 @@ def main():
 
     if not failed:
         print("\033[92;1mrv64 all pass "+"─"*30+"\033[0m")
+    system("fj kernel.fj")
     return ret
 
 exit(main())

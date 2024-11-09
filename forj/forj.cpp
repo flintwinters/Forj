@@ -312,8 +312,9 @@ Maybe<string> Text::parse() {
         if (t == '\"') {str = capture("\"");}
         else {str = capture("`");}
         if (W->searching) {
-            W->t->addvar(str, tnothing);
+            Node* v = W->t->addvar(str, tnothing);
             W = W->pullscope();
+            W->push(v);
             return pull();
         }
         W->push(new Node("", tstring))->val = (word) new string(str);

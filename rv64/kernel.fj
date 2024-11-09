@@ -24,3 +24,15 @@
 "push" rvpush <-!
 "pull" rvpush <-!
 "peek" rvpush <-!
+
+:"instruction"
+instruction:"a" string entype!
+instruction:"b" string entype!
+instruction:"c" string entype!
+instruction:"d" string entype!
+instruction:a "hi" =!
+instruction:[
+    :"combine"
+    [a b c d] "combine" assign! 
+]
+instruction:combine
