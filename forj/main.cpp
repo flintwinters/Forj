@@ -80,7 +80,7 @@ int arrayfunc(Wrap* W) {
     W->pull();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
-        if (W->peek()->gettype() != tarray) {
+        if (W->peek()->gettype() == tbang) {
             W->peek()->exec(W);
         }
     }
@@ -106,6 +106,17 @@ int fjapply(Wrap* W) {
     for (int i = 0; i <= b->sp; i++) {
         W->push(a->peek(a->sp-i));
         W->push(b->peek(b->sp-i))->exec(W);
+    }
+    return 1;
+}
+int fjrun(Wrap* W) {
+    W->pull(2);
+    Node* n = W->pull(); 
+    for (int i = 0; i <= n->sp; i++) {
+        W->push(n->peek(n->sp-i));
+        if (W->peek()->gettype() != tarray) {
+            W->peek()->exec(W);
+        }
     }
     return 1;
 }
@@ -223,6 +234,12 @@ int assign(Wrap* W) {
     string* s = (string*) W->pull()->val;
     W->peek(0)->name = *s;
     (*W->t)[*s] = W->pull();
+    return 1;
+}
+int declare(Wrap* W) {
+    W->pull(2);
+    string* s = (string*) W->pull()->val;
+    W->push(W->t->addvar(*s, tnothing));
     return 1;
 }
 int printfunc(Wrap* W) {
@@ -345,6 +362,7 @@ int main(int argc, char** argv) {
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
+    W->t->addvar("declare",     texec)->f = declare;
     W->t->addvar("assign",      texec)->f = assign;
     W->t->addvar("in",          texec)->f = fjin;
     W->t->addvar("print",       texec)->f = printfunc;
@@ -361,6 +379,7 @@ int main(int argc, char** argv) {
     W->t->addvar("push",        texec)->f = fjpush;
     W->t->addvar("map",         texec)->f = fjmap;
     W->t->addvar("apply",       texec)->f = fjapply;
+    W->t->addvar("run",         texec)->f = fjrun;
 
     Text* T = new Text(s, W);
     Maybe<string> m = T->parse();

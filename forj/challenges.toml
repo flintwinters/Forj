@@ -19,19 +19,19 @@ challenge = "1 2 + !"
 result = "3"
 
 [arradd]
-challenge = "[1 2 +] !"
+challenge = "[1 2 + !!] !"
 result = "3"
 
 [doublefunc]
-challenge = "1 2 3 4 [+ +] !"
+challenge = "1 2 3 4 [+ +] run !"
 result = "1 9"
 
 [execiftrue]
-challenge = "1 [4 5 6 +] ? !"
+challenge = "1 [4 5 6 + !!] ? !"
 result = "1 4 11"
 
 [execiffalse]
-challenge = "0 [4 5 6 +] ? !"
+challenge = "0 [4 5 6 + !!] ? !"
 result = ""
 
 [string]
@@ -72,14 +72,14 @@ result = "[ 1 2 3 [ okay:[] ] 4 5 6 ] [ okay:[] ] okay:[] "
 
 [depthvar3fail]
 challenge = """
-  :\"hi\" hi:[ 1 2 3 :\"test\" 4 5 6 ]
-  hi:test:[ :\"okay\" ]
+  "hi" declare! hi:[ 1 2 3 "test" declare! 4 5 6 ]
+  hi:test:[ "okay" declare! ]
   hi:test:okaye
 """
 result = """
-<4:67>:Couldn't find string 'okaye' in scope 'test'
-  :"hi" hi:[ 1 2 3 :"test" 4 5 6 ]
-  hi:test:[ :"okay" ]
+<4:91>:Couldn't find string 'okaye' in scope 'test'
+  "hi" declare! hi:[ 1 2 3 "test" declare! 4 5 6 ]
+  hi:test:[ "okay" declare! ]
   hi:test:!>>>>>okaye
 """
 
@@ -93,15 +93,19 @@ challenge = "!!"
 result = "!!"
 
 [shallowbang]
-challenge = "[1 2 3 + [4 5 +]]!"
+challenge = "[1 2 3 + !! [4 5 +]]!"
 result = "1 5  [ 4 5 + ] "
 
 [deepbang]
-challenge = "[1 2 3 + [4 5 +] !!] !"
+challenge = "[1 2 3 + !! [4 5 + !!] !!] !"
 result = "1 5 9"
 
+[successorcheck]
+challenge = "!!! !"
+result = "!!"
+
 [triple]
-challenge = "[1 2 3 + [4 5 +] !!! ] !! ! !"
+challenge = "[1 2 3 + !! [4 5 + !!] !!! ] !! ! !"
 result = "1 5 9"
 
 [depth4]
@@ -129,11 +133,11 @@ challenge = "1 2 3 pull!"
 result = "1 2"
 
 [twicepull]
-challenge = "1 2 3 [pull pull]!"
+challenge = "1 2 3 [pull pull] run!"
 result = "1"
 
 [condpull]
-challenge = "1 2 1 [pull pull]?!"
+challenge = "1 2 1 [[pull pull] run!!]?!"
 result = "1"
 
 [condpull2]
@@ -142,9 +146,9 @@ result = "1 2"
 
 [verboseclosure]
 challenge = """
-  :"n" literal entype!
+  "n" declare! literal entype!
   5 =!
-  [n [literal:+]!!] "ok" assign!
+  [n literal:+ !!] "ok" assign!
   1 ok!
   2 ok!
   n 7 =!
@@ -154,30 +158,31 @@ result = "7 6 7 7 10"
 
 [literaladd]
 challenge = """
-  :"n" literal entype! pull!
+  "n" declare! literal entype! pull!
   1 2 literal:+ !
 """
 result = "3"
 
 [addclosure]
 challenge = """
-  :"n" literal entype! pull!
+  "n" declare! literal entype! pull!
+  n 5 =! pull!
   1 2 n:+ !
 """
 result = "3"
 
 [addclosure2]
 challenge = """
-  :"n" literal entype! pull!
-  1 2 [n:+] !
+  "n" declare! literal entype! pull!
+  1 2 [n:+!!] !
 """
 result = "3"
 
 [implicit]
 challenge = """
-  :"n" literal entype!
+  "n" declare! literal entype!
   n:[
-    [n +] "+" assign!
+    [n + !!] "+" assign!
   ] pull!
   n 2 =! pull!
   1 n:+!
@@ -188,7 +193,7 @@ result = """2 3 12 3"""
 
 [clone]
 challenge = """
-  :"n" literal entype!
+  "n" declare! literal entype!
   4 =! clone!
   n n 9 +! =!
   n (n = 4)
@@ -205,7 +210,7 @@ result = "1"
 
 [shallowclone]
 challenge = """
-  :"n" :"m"
+  "n" declare! "m" declare!
   m:"z"
   literal entype!
   2 =!
@@ -221,19 +226,19 @@ result = "n:[] m:[] 4 4 4 4 2"
 
 [fib]
 challenge = """
-  [0 push 2 swap +!!] "fib" assign!
+  [0 push 2 swap +] "fib" assign!
   1 1
-  fib! fib! fib! fib! fib!
+  fib run! fib run! fib run! fib run! fib run!
 """
 result = "8 13"
 
 [factorial]
 challenge = """
-  :"factorial"
+  "factorial" declare!
   [
-    0 push 1 -
-    [factorial ->] ?!!
-    *
+    0 push!! 1 -!!
+    [factorial ->!! !!] ?!!
+    *!!
   ] <-!
   factorial array entype! pull!
 
@@ -247,7 +252,7 @@ result = "\".quad t0\""
 
 [pusharray]
 challenge = """
-  :"arr"
+  "arr" declare!
   array entype!
   ["hi"] <-!
   arr:[4 5 6] pull!
@@ -258,16 +263,16 @@ result = "[ 4 5 6 5 ]"
 
 [mapvect]
 challenge = """
-  :"arr" pull!
-  arr:[1 2 3 4] [1 +] map!
+  "arr" declare! pull!
+  arr:[1 2 3 4] [1 + !!] map!
   arr
 """
 result = "[ 2 3 4 5 ] [ 1 2 3 4 ] "
 
 [identmap]
 challenge = """
-  :"arr" pull!
-  :"n" literal entype! 4 =! pull!
+  "arr" declare! pull!
+  "n" declare! literal entype! 4 =! pull!
   arr:[1 2 3 n]
   [] map!
   "arr2" assign!
@@ -280,7 +285,7 @@ result = "[ 1 2 3 5 ] [ 1 2 3 5 ] [ 1 2 3 4 ] 5"
 
 [clonemap]
 challenge = """
-  :"arr" pull!
+  "arr" declare! pull!
   arr:[1 2 3 4]
   clone map!
   "arr2" assign!
@@ -291,8 +296,8 @@ result = "[ 1 2 7 ] [ 1 2 3 4 ]"
 
 [infunc]
 challenge = """
-  :"stk"
-  [1 0 push] in !
+  "stk" declare!
+  [1 0 push !!] in !
   stk + in!
   stk
 """
@@ -300,21 +305,21 @@ result = "[ 2 ]"
 
 [foldarr]
 challenge = """
-  :"arr" pull!
-  :"n" array entype! pull!
+  "arr" declare! pull!
+  "n" declare! array entype! pull!
   arr:[1 2 3 4]
-  [n [[+]] in] map!
+  [n [+] in!!] map!
   arr n apply!
 """
 result = "10"
 
 [args]
 challenge = """
-  :"func" array entype! pull!
-  :"arr" array entype! pull!
-  func:[1 + "a" assign] pull!
+  "func" declare! array entype! pull!
+  "arr" declare! array entype! pull!
+  func:[1 +!! "a" assign!!] pull!
   arr:[1 2 3 4]
-  [arr func in] "wrap" assign!
+  [arr func in!!] "wrap" assign!
   array entype! pull!
   arr clone map!
   wrap! arr clone map!
@@ -326,23 +331,31 @@ result = "[ 1 2 3 4 ]   [ 1 2 3 ]   [ 1 2 ]   [ 1 ]  3 "
 
 [object]
 challenge = """
-  :"class" pull!
+  "class" declare! pull!
   class:[
-    :"construct" pull!
+    "construct" declare! pull!
     construct:[
-      :"this" class <-! pull!
+      "this" declare! class <-! pull!
     ]
   ]
   class:construct:this ->! [1] in!
-  class:construct:this ->! ["a" assign] in!
+  class:construct:this ->! ["a" assign!!] in!
   class:a
 """
 result = "[ construct:[] ] 1"
 
+[build]
+challenge = """
+  "arr" declare! array entype!
+  [1 2 3 [+]] in!
+  arr
+"""
+result = "[ 1 2 3  [ + ]  ]"
+
 [zip]
 challenge = """
-  :"zip1" array entype! pull!
-  :"zip2" array entype! pull!
+  "zip1" declare! array entype! pull!
+  "zip2" declare! array entype! pull!
   zip1:[1 2 3 4] pull!
   zip2:[5 6 7 8] pull!
   zip1 zip2 apply!
@@ -351,21 +364,21 @@ result = "1 5 2 6 3 7 4 8"
 
 [foldfunc]
 challenge = """
-  :"arr" array entype! pull!
+  "arr" declare! array entype! pull!
   arr [1 2 3 4] in!
 
-  :"fold" array entype! pull!
+  "fold" declare! array entype! pull!
 
   fold:[
-    :"farr" array entype! pull!
-    :"f" array entype! pull!
-    :"v" array entype! pull!
+    "farr" declare! array entype! pull!
+    "f" declare! array entype! pull!
+    "v" declare! array entype! pull!
 
-    v -> [farr [f ->] in] map
+    v -> [farr [f ->!!] in!!] map
     v -> farr apply
   ] pull!
   fold:v arr <-!
-  fold:f [+] <-!
-  fold!
+  fold:f + <-!
+  fold run!
 """
 result = "10"
