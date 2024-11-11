@@ -13,7 +13,9 @@ def runforj(v):
     with open("challenge", "w") as f:
         f.write(v["challenge"]+" ")
     if system("./fj challenge > challengeresult")//256 > 1:
-        return "execution returned error code"
+        with open("challengeresult", "r") as f:
+            s = f.read()
+            return "execution returned error code"+s
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     with open("challengeresult", "r") as f:
         s = f.read()

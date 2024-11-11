@@ -46,9 +46,6 @@ public:
         return t;
     }
     T peek(int i = 0) {return s[sp-i];}
-    void under(T t) {
-        s.insert(s.begin(), t);
-    }
     void swapi(int i = 0) {
         T b = peek(i);
         s[sp-i] = peek();
@@ -69,7 +66,7 @@ Node* tnothing;
 Node* tstring;
 Node* tliteral;
 Node* tarray;
-Node* tmacro;
+Node* tcontext;
 Node* tbang;
 Node* texec;
 // Tree datastructure.
@@ -80,7 +77,7 @@ public:
     vector<Node*> parents;
     string name;
     word val = 0;
-    func f; // executable function
+    func f = 0; // executable function
     // Create a new node, adding it to the vect so it can be deleted later
     Node(string s, Node* t): name(s) {
         parents.push_back(t);
@@ -105,9 +102,6 @@ public:
     }
     Node* type(int i) {return parents[parents.size()-i-1];}
     Node* gettype() {return type(0);}
-    void mirror(Node* n) {
-
-    }
     int exec(Wrap* W);
     // Search all parents for `s`
     Maybe<Node*> search(string s) {
@@ -268,7 +262,7 @@ int arrayfunc(Node* n, Wrap* W);
 Maybe<string> Text::parse() {
     if (cleanwhitespace()) {return string(" ");}
     Maybe<char> t = splitfind(" \n\t\r\b");
-    t = splitfind(":[]{}(!\"`");
+    t = splitfind(":[](!\"`");
     if (!t) {
         Maybe<string> m = final(peek());
         if (m) {return pull();}
@@ -298,12 +292,12 @@ Maybe<string> Text::parse() {
         W->searching = false;
         return s;
     }
-    else if (t == '[' || t == '{') {
+    else if (t == '[') {
         Node* n = W->t;
         if (W->searching) {W = W->pullscope()->pushscope(n);}
-        else {W = W->pushscope(new Node("", (t == '[') ? tarray : tmacro));}
+        else {W = W->pushscope(new Node("", tarray));}
     }
-    else if (t == ']' || t == '}') {
+    else if (t == ']') {
         Node* n = W->t;
         (W = W->pullscope())->push(n);
     }
@@ -315,7 +309,7 @@ Maybe<string> Text::parse() {
             Node* v = W->t->addvar(str, tnothing);
             W = W->pullscope();
             W->push(v);
-            return pull();
+            return peek();
         }
         W->push(new Node("", tstring))->val = (word) new string(str);
         return str;
