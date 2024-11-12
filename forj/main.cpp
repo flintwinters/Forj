@@ -224,9 +224,26 @@ int swapnode(Wrap* W) {
 int execif(Wrap* W) {
     W->pull(2);
     if (W->peek(1)->val != 0) {
-        W->peek()->exec(W);
+        W->pull()->exec(W);
     }
     else {W->pull(2);}
+    return 1;
+}
+int equals(Wrap* W) {
+    W->pull(2);
+    W->push(new Node("", tliteral))->val = W->pull()->val == W->pull()->val;
+    return 1;
+}
+int fjnot(Wrap* W) {
+    W->pull(2);
+    W->push(new Node("", tliteral))->val = !W->pull()->val;
+    return 1;
+}
+int isempty(Wrap* W) {
+    W->pull(2);
+    Node* n = new Node("", tliteral);
+    n->val = W->pull()->isempty();
+    W->push(n);
     return 1;
 }
 int assign(Wrap* W) {
@@ -362,6 +379,9 @@ int main(int argc, char** argv) {
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("?",           texec)->f = execif;
+    W->t->addvar("==",          texec)->f = equals;
+    W->t->addvar("not",         texec)->f = fjnot;
+    W->t->addvar("isempty",     texec)->f = isempty;
     W->t->addvar("declare",     texec)->f = declare;
     W->t->addvar("assign",      texec)->f = assign;
     W->t->addvar("in",          texec)->f = fjin;

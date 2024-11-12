@@ -28,11 +28,18 @@ result = "1 9"
 
 [execiftrue]
 challenge = "1 [4 5 6 + !!] ? !"
-result = "1 4 11"
+result = "4 11"
 
 [execiffalse]
 challenge = "0 [4 5 6 + !!] ? !"
 result = ""
+
+[isempty]
+challenge = """
+  [] isempty! [1 2 3] ? !
+  [1] isempty! [4 5 6] ? !
+"""
+result = "1 2 3"
 
 [string]
 challenge = "\"hello\""
@@ -138,11 +145,11 @@ result = "1"
 
 [condpull]
 challenge = "1 2 1 [[pull pull] run!!]?!"
-result = "1"
+result = ""
 
 [condpull2]
 challenge = "1 2 1 pull ?!"
-result = "1 2"
+result = "1"
 
 [verboseclosure]
 challenge = """
@@ -237,6 +244,9 @@ challenge = """
   "factorial" declare!
   [
     0 push!! 1 -!!
+    0 push!!
+    0 push!!
+    not!! pull ?!!
     [factorial ->!! !!] ?!!
     *!!
   ] <-!

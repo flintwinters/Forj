@@ -22,8 +22,8 @@
 :"rvpeek"
 
 "push" rvpush <-!
-"pull" rvpush <-!
-"peek" rvpush <-!
+"pull" rvpull <-!
+"peek" rvpeek <-!
 
 :"instruction"
 instruction:"a" string entype!
