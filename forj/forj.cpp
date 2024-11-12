@@ -3,7 +3,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <list>
 
 using namespace std;
 typedef long long word;
@@ -74,19 +73,21 @@ Node* texec;
 vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
-    vector<Node*> parents;
+    Node* type = tnothing;
+    Node* parent = 0;
     string name;
     word val = 0;
     func f = 0; // executable function
     // Create a new node, adding it to the vect so it can be deleted later
     Node(string s, Node* t): name(s) {
-        parents.push_back(t);
+        type = t;
         allnodes.push_back(this);
     }
 
     Node(Node& n): map<string, Node*>(n), Stack<Node*>(n) {
         name = n.name;
-        parents = n.parents;
+        type = n.type;
+        parent = n.parent;
         val = n.val;
         f = n.f;
         allnodes.push_back(this);
@@ -100,18 +101,17 @@ public:
         if (in(s)) {return (*this)[s];}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
-    Node* type(int i) {return parents[parents.size()-i-1];}
-    Node* gettype() {return type(0);}
     int exec(Wrap* W);
     // Search all parents for `s`
     Maybe<Node*> search(string s) {
         if (in(s)) {return (*this)[s];}
-        for (Node* p : parents) {
-            if (!p) {continue;}
-            Maybe<Node*> m = p->getvar(s);
-            if (m) {
-                return m;
-            }
+        if (parent) {
+            Maybe<Node*> m = parent->getvar(s);
+            if (m) {return m;}
+        }
+        if (type) {
+            Maybe<Node*> m = type->getvar(s);
+            if (m) {return m;}
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
@@ -161,7 +161,7 @@ public:
 
 int Node::exec(Wrap* W) {
     W->push(this);
-    return gettype()->f(W);
+    return type->f(W);
 }
 
 // Parser class
@@ -288,7 +288,9 @@ Maybe<string> Text::parse() {
         split(i);
         pull();
         if (i) {W->push(new Node(peek(), tbang))->val = i;}
-        else {W->peek()->exec(W);}
+        else {
+            if (!W->peek()->exec(W)) {return Fail<string>("function errored");}
+        }
         W->searching = false;
         return s;
     }
