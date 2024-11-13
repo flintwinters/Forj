@@ -1,4 +1,5 @@
 #include "forj.cpp"
+#include <type_traits>
 
 template <typename T> string Maybe<T>::str(string s) {
     int idx = 0;
@@ -183,7 +184,14 @@ int fjor(Wrap* W) {
 }
 int fjequal(Wrap* W) {
     W->pull(2);
-    word w = W->peek(1)->val==W->peek(0)->val;
+    word w = W->peek(1)->val == W->peek(0)->val;
+    W->pull(2);
+    W->push(new Node("", tliteral))->val = w;
+    return 1;
+}
+int fjlessthan(Wrap* W) {
+    W->pull(2);
+    word w = W->peek(1)->val < W->peek(0)->val;
     W->pull(2);
     W->push(new Node("", tliteral))->val = w;
     return 1;
@@ -282,9 +290,11 @@ int isempty(Wrap* W) {
 }
 int assign(Wrap* W) {
     W->pull(2);
-    string* s = (string*) W->pull()->val;
-    W->peek(0)->name = *s;
-    (*W->t)[*s] = W->pull();
+    // string* s = (string*) W->pull()->val;
+    // W->peek(0)->name = *s;
+    // (*W->t)[*s] = W->pull();
+    Node* n = W->pull();
+    (*W->t)[n->name] = W->pull();
     return 1;
 }
 int declare(Wrap* W) {
@@ -395,7 +405,8 @@ int main(int argc, char** argv) {
     Wrap* W = new Wrap(Global, 0);
 
     (ttype      = W->t->addvar("type",      0))->f = typefunc;
-    (tcontext   = W->t->addvar("context",     0))->f = arrayfunc;
+    ttype->settype(ttype);
+    (tcontext   = W->t->addvar("context",   ttype))->f = arrayfunc;
     (tnothing   = W->t->addvar("nothing",   ttype))->f = nothingfunc;
     (tstring    = W->t->addvar("string",    ttype))->f = stringfunc;
     (tliteral   = W->t->addvar("literal",   ttype))->f = literalfunc;
@@ -431,6 +442,7 @@ int main(int argc, char** argv) {
     tliteral->addvar("/", texec)->f = W->t->addvar("/", texec)->f = fjdiv;
 
     tliteral->addvar("==", texec)->f = W->t->addvar("==", texec)->f = fjequal;
+    tliteral->addvar("<", texec)->f = W->t->addvar("<", texec)->f = fjlessthan;
     tliteral->addvar("not", texec)->f = W->t->addvar("not", texec)->f = fjnot;
     tliteral->addvar("and", texec)->f = W->t->addvar("and", texec)->f = fjand;
     tliteral->addvar("or", texec)->f = W->t->addvar("or", texec)->f = fjor;
