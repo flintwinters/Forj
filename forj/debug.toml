@@ -2,6 +2,7 @@ breakpoints = [
     "BREAKPOINT",
     "errorexit",
     "forj.cpp:debug",
+    "assign",
     # "forj.cpp:exec",
     # "8",
     # "forj.cpp:265",

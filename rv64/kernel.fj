@@ -22,19 +22,30 @@
 :"rvpull"
 :"rvpeek"
 
-"push" rvpush <-!
-"pull" rvpull <-!
-"peek" rvpeek <-!
+"push" rvpush <-! pull!
+"pull" rvpull <-! pull!
+"peek" rvpeek <-! pull!
 
-:"instruction"
-instruction:"a" string!
-instruction:"b" string!
-instruction:"c" string!
-instruction:"d" string!
-instruction:a "hi" =!
+:"class" type!
+class:"#?" array! pull!
+class:#?:[
+	class:#?:"a" literal! pull!
+	a 1 swap!! =!! pull!!
+	[class:#?:a ==!!] map!!
+] pull!
+debug!
+[0 2 1] 1
+class:#?!
+class:#?:a
+
+(
+:"instruction" type! pull!
+instruction:"a" string! pull!
+instruction:"b" string! pull!
+instruction:"c" string! pull!
+instruction:"d" string! pull!
+instruction:a "hi" =! pull!
 instruction:[
-    :"combine"
     [a b c d] "combine" assign! 
 ]
-instruction:combine
-
+instruction:combine)

@@ -29,8 +29,11 @@ def runforj(v):
 def main():
     ret = 0
     if len(argv) > 1:
-        with open("challenge", "w") as f:
-            f.write(T[argv[1]]["challenge"]+" ")
+        if argv[1].endswith(".fj"):
+            system(f"cp {argv[1]} challenge")
+        else:
+            with open("challenge", "w") as f:
+                f.write(T[argv[1]]["challenge"]+" ")
         # system("forjlang challenge > challengeresult")
         ret = 1
     else:

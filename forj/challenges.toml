@@ -178,7 +178,7 @@ result = "1"
 challenge = """
   "n" declare! literal!
   5 =!
-  [n literal:+ !!] "ok" assign!
+  [n literal:+ !!] "ok" declare! assign!
   1 ok!
   2 ok!
   n 7 =!
@@ -212,7 +212,7 @@ result = "3"
 challenge = """
   "n" declare! literal!
   n:[
-    [n + !!] "+" assign!
+    [n + !!] "+" declare! assign!
   ] pull!
   n 2 =! pull!
   1 n:+!
@@ -233,7 +233,7 @@ result = "4 13 13 4"
 
 [assign]
 challenge = """
-  1 "a" assign !
+  1 "a" declare! assign !
   a literal!
 """
 result = "1"
@@ -245,10 +245,10 @@ challenge = """
   literal!
   2 =!
   m:z
-  m:z 1 replicate! ! "b" assign!
+  m:z 1 replicate! ! "b" declare! assign!
   (the replicate isn't deep:
     references to variables are not copied)
-  m 1 replicate! ! "o" assign!
+  m 1 replicate! ! "o" declare! assign!
   o:z o:z 2 +! =!
   o:z b
 """
@@ -256,7 +256,7 @@ result = "n:[] m:[] 4 4 4 4 2"
 
 [fib]
 challenge = """
-  [0 push 2 swap +] "fib" assign!
+  [0 push 2 swap +] "fib" declare! assign!
   1 1
   fib run! fib run! fib run! fib run! fib run!
 """
@@ -310,7 +310,7 @@ challenge = """
   "n" declare! literal! 4 =! pull!
   arr:[1 2 3 n]
   [] map!
-  "arr2" assign!
+  "arr2" declare! assign!
   arr2
   arr
   arr [1 replicate!! !!] map!
@@ -323,7 +323,7 @@ challenge = """
   "arr" declare! pull!
   arr:[1 2 3 4]
   [1 replicate !! !!] map!
-  "arr2" assign!
+  "arr2" declare! assign!
   arr2:[+!]
   arr
 """
@@ -380,9 +380,9 @@ result = "10"
 challenge = """
   "func" declare! array! pull!
   "arr" declare! array! pull!
-  func:[1 +!! "a" assign!!] pull!
+  func:[1 +!! "a" declare! assign!!] pull!
   arr:[1 2 3 4]
-  [arr func in!!] "wrap" assign!
+  [arr func in!!] "wrap" declare! assign!
   array! pull!
   arr [1 replicate!! !!] map!
   wrap! arr [1 replicate!! !!] map!
@@ -402,7 +402,7 @@ challenge = """
     ]
   ]
   class:construct:this ->! [1] in!
-  class:construct:this ->! ["a" assign!!] in!
+  class:construct:this ->! ["a" declare! assign!!] in!
   class:a
 """
 result = "[ construct:[] ] 1"
@@ -461,9 +461,36 @@ challenge = """
 """
 result = "10 -27 0"
 
-[typecheck]
+[fold2]
 challenge = """
-  "?#" declare !
-    
+  :"fold" pull!
+  fold:"f" array!
+  fold:"v" array!
+  :"foldlink" fold <-!
+  fold:[
+    v ->!! f ->!! in!!
+    1 v ->!! length!! <!! [foldlink ->!! !!] ?!!
+  ] pull!
+  fold array! pull!
+  :"arr" array!
+  arr:[1 2 3 4] + in!
+  fold:v arr <-!
+  fold:f + <-!
+  fold!
 """
 result = ""
+
+[typecheck]
+challenge = """
+  :"class" type!
+  class:"is" array! pull!
+  class:is:"a" literal! pull!
+  class:is:[
+    a 1 swap!! =!! pull!!
+    [class:is:a ==!!] map!!
+  ] pull!
+  [0 2 1] 1
+  class:is!
+  class:is:a
+"""
+result = "class:[]  [ 0 0 1 ]  1"
