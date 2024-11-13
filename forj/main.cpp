@@ -26,21 +26,21 @@ template <typename T> string Stack<T>::str(string (tostr)(T)) {
 
 string Node::str() {
     return Stack::str([](Node* n)->string {
-        if (n->type == tcontext) {return "{"+n->str()+"}";}
-        if (n->type == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
-        if (n->type == texec)    {return "\033[31m" + n->name + "\033[0m";}
-        if (n->type == tstring)  {
+        if (n->gettype() == tcontext) {return "{"+n->str()+"}";}
+        if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
+        if (n->gettype() == texec)    {return "\033[31m" + n->name + "\033[0m";}
+        if (n->gettype() == tstring)  {
             if (!n->val) {return "\033[32m0\033[0m";}
             return "\033[32m\"" + *(string*) n->val + "\"\033[0m";
         }
-        if (n->type == tbang)    {
+        if (n->gettype() == tbang)    {
             string s = "!";
             for (int i = 0; i < n->val; i++) {
                 s += '!';
             }
             return "\033[33;1m" + s + "\033[0m";}
         if (n->isempty()) {return "\033[34m" + n->name + ":" + "[]\033[0m";}
-        if (n->type == tarray) {return " ["+n->str()+"] ";}
+        if (n->gettype() == tarray) {return " ["+n->str()+"] ";}
         return "["+n->str()+"]";
     });
 }
@@ -48,7 +48,8 @@ string Node::str() {
 // functions to be executed when bang is called on a type
 int typefunc(Wrap* W) {
     W->pull();
-    W->peek()->type = W->pull();
+    Node* t = W->pull();
+    W->peek()->settype(t);
     return 1;
 }
 int contextfunc(Wrap* W) {
@@ -80,7 +81,7 @@ int arrayfunc(Wrap* W) {
     W->pull();
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
-        if (W->peek()->type == tbang) {
+        if (W->peek()->gettype() == tbang) {
             if (!W->peek()->exec(W)) {return 1;}
         }
     }
@@ -115,7 +116,7 @@ int fjrun(Wrap* W) {
     Node* n = W->pull(); 
     for (int i = 0; i <= n->sp; i++) {
         W->push(n->peek(n->sp-i));
-        if (W->peek()->type != tarray) {
+        if (W->peek()->gettype() != tarray) {
             if (!W->peek()->exec(W)) {return 0;}
         }
     }
@@ -193,7 +194,7 @@ int BREAKPOINT(Wrap* W) {
         printf("[\033[31mBREAK\033[35;1m\033[0m]\n");
         return 1;
     }
-    if (W->peek()->type == tstring) {
+    if (W->peek()->gettype() == tstring) {
         string s = *(string*) W->pull()->val;
         printf("[\033[31mBREAK \033[35;1m%s\033[0m:%s]\n", s.c_str(), W->t->str().c_str());
         return 1;
@@ -373,20 +374,9 @@ int fjpush(Wrap* W) {
     W->push(W->peek(W->pull()->val));
     return 1;
 }
-int detype(Wrap* W) {
-    W->pull(2);
-    W->push(W->pull()->type);
-    return 1;
-}
 int errorexit(Maybe<string> m, string s) {
     printf("%s\n", m.str(s).c_str());
     return 1;
-}
-#define STRING(f) #f
-func addvar(Wrap* W, func f, string s = "", Node* t = texec) {
-    if (s == "") {s = STRING(f);}
-    W->t->addvar(s, t)->f = f;
-    return f;
 }
 int main(int argc, char** argv) {
     if (argc != 2) {
@@ -413,45 +403,44 @@ int main(int argc, char** argv) {
     (tbang      = W->t->addvar("bang",      ttype))->f = bangfunc;
     (texec      = W->t->addvar("exec",      ttype))->f = execfunc;
 
-    addvar(W, BREAKPOINT,   "breakpoint");
-    addvar(W, DEBUG,        "debug");
-    addvar(W, loadfile);        
-    addvar(W, savefile);        
-    addvar(W, appendfile);      
-    addvar(W, splitat);     
-    addvar(W, swapnode,     "swap");
-    addvar(W, stringconcat, "concat");
-    addvar(W, includefile,  "include");
-    addvar(W, detype);      
-    addvar(W, execif,       "?");
-    addvar(W, equals,       "==");
-    addvar(W, fjnot,        "not");
-    addvar(W, isempty);     
-    addvar(W, declare);     
-    addvar(W, assign);      
-    addvar(W, fjin,         "in");
-    addvar(W, fjlength,     "length");
-    addvar(W, printfunc,    "print");
-    addvar(W, link,         "<-");
-    addvar(W, lunk,         "->");
-    addvar(W, setval,       "=");
-    addvar(W, replicate);       
-    addvar(W, runsystem,    "system");
-    addvar(W, fjpull,       "pull");
-    addvar(W, fjpush,       "push");
-    addvar(W, fjmap,        "map");
-    addvar(W, fjapply,      "apply");
-    addvar(W, fjrun,        "run");
-    addvar(W, fjexit,       "exit");
-    tliteral->addvar("+", texec)->f = addvar(W, fjadd, "+");
-    tliteral->addvar("-", texec)->f = addvar(W, fjsub, "-");
-    tliteral->addvar("*", texec)->f = addvar(W, fjmul, "*");
-    tliteral->addvar("/", texec)->f = addvar(W, fjdiv, "/");
+    W->t->addvar("breakpoint",  texec)->f = BREAKPOINT;
+    W->t->addvar("debug",       texec)->f = DEBUG;
+    W->t->addvar("loadfile",    texec)->f = loadfile;
+    W->t->addvar("savefile",    texec)->f = savefile;
+    W->t->addvar("appendfile",  texec)->f = appendfile;
+    W->t->addvar("splitat",     texec)->f = splitat;
+    W->t->addvar("swap",        texec)->f = swapnode;
+    W->t->addvar("concat",      texec)->f = stringconcat;
+    W->t->addvar("include",     texec)->f = includefile;
+    W->t->addvar("?",           texec)->f = execif;
+    W->t->addvar("==",          texec)->f = equals;
+    W->t->addvar("not",         texec)->f = fjnot;
+    W->t->addvar("isempty",     texec)->f = isempty;
+    W->t->addvar("declare",     texec)->f = declare;
+    W->t->addvar("assign",      texec)->f = assign;
+    W->t->addvar("in",          texec)->f = fjin;
+    W->t->addvar("length",      texec)->f = fjlength;
+    W->t->addvar("print",       texec)->f = printfunc;
+    W->t->addvar("<-",          texec)->f = link;
+    W->t->addvar("->",          texec)->f = lunk;
+    W->t->addvar("=",           texec)->f = setval;
+    W->t->addvar("replicate",       texec)->f = replicate;
+    tliteral->addvar("+", texec)->f = W->t->addvar("+", texec)->f = fjadd;
+    tliteral->addvar("-", texec)->f = W->t->addvar("-", texec)->f = fjsub;
+    tliteral->addvar("*", texec)->f = W->t->addvar("*", texec)->f = fjmul;
+    tliteral->addvar("/", texec)->f = W->t->addvar("/", texec)->f = fjdiv;
 
-    tliteral->addvar("==", texec)->f  = addvar(W, fjequal, "==");
-    tliteral->addvar("not", texec)->f = addvar(W, fjnot, "not");
-    tliteral->addvar("and", texec)->f = addvar(W, fjand, "and");
-    tliteral->addvar("or", texec)->f  = addvar(W, fjor, "or");
+    tliteral->addvar("==", texec)->f = W->t->addvar("==", texec)->f = fjequal;
+    tliteral->addvar("not", texec)->f = W->t->addvar("not", texec)->f = fjnot;
+    tliteral->addvar("and", texec)->f = W->t->addvar("and", texec)->f = fjand;
+    tliteral->addvar("or", texec)->f = W->t->addvar("or", texec)->f = fjor;
+    W->t->addvar("system",      texec)->f = runsystem;
+    W->t->addvar("pull",        texec)->f = fjpull;
+    W->t->addvar("push",        texec)->f = fjpush;
+    W->t->addvar("map",         texec)->f = fjmap;
+    W->t->addvar("apply",       texec)->f = fjapply;
+    W->t->addvar("run",         texec)->f = fjrun;
+    W->t->addvar("exit",        texec)->f = fjexit;
 
     Text* T = new Text(s, W);
     Maybe<string> m = T->parse();

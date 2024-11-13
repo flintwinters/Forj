@@ -73,25 +73,26 @@ Node* texec;
 vector<Node*> allnodes;
 class Node : public map<string, Node*>, public Stack<Node*> {
 public:
-    Node* type = tnothing;
     Node* parent = 0;
     string name;
     word val = 0;
     func f = 0; // executable function
     // Create a new node, adding it to the vect so it can be deleted later
     Node(string s, Node* t): name(s) {
-        type = t;
+        settype(t);
         allnodes.push_back(this);
     }
 
     Node(Node& n): map<string, Node*>(n), Stack<Node*>(n) {
         name = n.name;
-        type = n.type;
+        settype(n.gettype());
         parent = n.parent;
         val = n.val;
         f = n.f;
         allnodes.push_back(this);
     }
+    Node* gettype() {return (*this)["#"];}
+    Node* settype(Node* t) {return (*this)["#"] = t;}
     // Delete all nodes created with `New`
     static void deleteall() {for (Node* n : allnodes) {delete n;}}
     // If the variable `s` exists
@@ -109,8 +110,8 @@ public:
             Maybe<Node*> m = parent->getvar(s);
             if (m) {return m;}
         }
-        if (type) {
-            Maybe<Node*> m = type->getvar(s);
+        if (gettype()) {
+            Maybe<Node*> m = gettype()->getvar(s);
             if (m) {return m;}
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
@@ -161,7 +162,7 @@ public:
 
 int Node::exec(Wrap* W) {
     W->push(this);
-    return type->f(W);
+    return gettype()->f(W);
 }
 
 // Parser class
