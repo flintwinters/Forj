@@ -48,7 +48,7 @@ string Node::str() {
 // functions to be executed when bang is called on a type
 int typefunc(Wrap* W) {
     W->pull();
-    printf("hi from typefunc\n");
+    W->peek()->type = W->pull();
     return 1;
 }
 int contextfunc(Wrap* W) {
@@ -262,7 +262,7 @@ int swapnode(Wrap* W) {
 int execif(Wrap* W) {
     W->pull(2);
     if (W->peek(1)->val != 0) {
-        if (!W->peek()->exec(W)) {return 0;}
+        if (!W->pull()->exec(W)) {return 0;}
     }
     else {W->pull(2);}
     return 1;
@@ -373,12 +373,6 @@ int fjpush(Wrap* W) {
     W->push(W->peek(W->pull()->val));
     return 1;
 }
-int entype(Wrap* W) {
-    W->pull(2);
-    W->peek(1)->type = W->peek(0);
-    W->pull(1);
-    return 1;
-}
 int detype(Wrap* W) {
     W->pull(2);
     W->push(W->pull()->type);
@@ -422,7 +416,6 @@ int main(int argc, char** argv) {
     W->t->addvar("swap",        texec)->f = swapnode;
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
-    W->t->addvar("entype",      texec)->f = entype;
     W->t->addvar("detype",      texec)->f = detype;
     W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("==",          texec)->f = equals;

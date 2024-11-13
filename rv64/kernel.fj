@@ -15,6 +15,7 @@
 	ld \reg, 0(sp)
 .endm
 `
+
 "rvkernel.s" savefile!
 
 :"rvpush"
@@ -26,13 +27,14 @@
 "peek" rvpeek <-!
 
 :"instruction"
-instruction:"a" string entype!
-instruction:"b" string entype!
-instruction:"c" string entype!
-instruction:"d" string entype!
+instruction:"a" string!
+instruction:"b" string!
+instruction:"c" string!
+instruction:"d" string!
 instruction:a "hi" =!
 instruction:[
     :"combine"
     [a b c d] "combine" assign! 
 ]
 instruction:combine
+
