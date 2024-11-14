@@ -105,7 +105,6 @@ int fjapply(Wrap* W) {
     W->pull(2);
     Node* b = W->pull();
     Node* a = W->pull();
-    // for (int i = b->sp; i >= 0; i--) {
     for (int i = 0; i <= b->sp; i++) {
         W->push(a->peek(a->sp-i));
         if (!W->push(b->peek(b->sp-i))->exec(W)) {return 0;};
@@ -126,7 +125,7 @@ int fjrun(Wrap* W) {
 int fjin(Wrap* W) {
     W->pull(2);
     Node* f = W->pull();
-    W = W->pushscope(W->pull());
+    W = W->pushscope(W->peek());
     if (!W->push(f)->exec(W)) {return 0;}
     return 1;
 }
@@ -152,7 +151,7 @@ int fjdir(Wrap* W) {
 }
 int fjlength(Wrap* W) {
     W->pull(2);
-    word len = W->pull()->sp+1;
+    word len = W->t->sp+1;
     W->push(new Node("", tliteral))->val = len;
     return 1;
 }
@@ -246,7 +245,6 @@ int explore(Wrap* W) {
     for (auto const& x : (map<string, Node*>) *W->peek(0)) {
         printf("(%s: %s)\n", x.first.c_str(), x.second->str().c_str());
     }
-    W->pull();
     return 1;
 }
 int loadfile(Wrap* W) {
@@ -304,6 +302,16 @@ int execif(Wrap* W) {
         if (!W->pull()->exec(W)) {return 0;}
     }
     else {W->pull(2);}
+    return 1;
+}
+int fjwhile(Wrap* W) {
+    W->pull(2);
+    Node* a = W->pull();
+    W->push(a)->exec(W);
+    while (W->pull()->val) {
+        W->push(a)->exec(W);
+        if (W->t->isempty()) {return 0;}
+    }
     return 1;
 }
 int isempty(Wrap* W) {
@@ -400,6 +408,15 @@ int runsystem(Wrap* W) {
     system(str->c_str());
     return 1;
 }
+int fjpullfrom(Wrap* W) {
+    W->pull(2);
+    W = W->pushscope(W->peek(0));
+    Node* n = W->pull();
+    W = W->pullscope();
+    W->pull();
+    W->push(n);
+    return 1;
+}
 int fjpull(Wrap* W) {
     W->pull(3); 
     return 1;
@@ -474,6 +491,7 @@ int main(int argc, char** argv) {
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("?",           texec)->f = execif;
+    W->t->addvar("while",       texec)->f = fjwhile;
     W->t->addvar("not",         texec)->f = fjnot;
     W->t->addvar("isempty",     texec)->f = isempty;
     W->t->addvar("declare",     texec)->f = declare;
@@ -498,6 +516,7 @@ int main(int argc, char** argv) {
     tliteral->addvar("or", texec)->f = W->t->addvar("or", texec)->f = fjor;
     tstring->addvar("expand", texec)->f = expandstring;
     W->t->addvar("system",      texec)->f = runsystem;
+    W->t->addvar("pullfrom",    texec)->f = fjpullfrom;
     W->t->addvar("pull",        texec)->f = fjpull;
     W->t->addvar("push",        texec)->f = fjpush;
     W->t->addvar("map",         texec)->f = fjmap;

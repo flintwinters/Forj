@@ -18,30 +18,30 @@
 
 "rvkernel.s" savefile!
 
-:"rvpush"
-:"rvpull"
-:"rvpeek"
+:"#stack" array!
+#stack
 
-"push" rvpush <-! pull!
-"pull" rvpull <-! pull!
-"peek" rvpeek <-! pull!
+:"rvpush" string! "push\n" =! pull!
+:"rvpull" string! "pull\n" =! pull!
+:"rvpeek" string! "peek\n" =! pull!
 
-:"fold" pull!
-fold:"f" array!
-fold:"v" array!
+:"fold" array!  pull!
+fold:"f" array! pull!
+fold:"v" array! pull!
 fold:"foldlink" fold <-!
 fold:[
-    v ->!! f ->!! in!!
-    1 v ->!! length!! <!!
-    [fold:foldlink ->!! !!] ?!!
+    1 v ->!! length in!! pullfrom!! <!! [
+        v ->!! f ->!! in!! pull!! fold:foldlink ->!! !!
+    ] ?!!
 ] pull!
-fold array! pull!
 
-type:"#?" array! pull!
-type:#?:[
-    :"a" literal! pull!
+:"contains" array! pull!
+(consumes arr and value from stack)
+(returns 1 if value is in arr, 0 otherwise)
+contains:[
+    "a" declare! literal! pull!
     a 1 swap!! =!! pull!!
-    [type:#?:a ==!!] map!!
+    [a ==!!] map!!
 
     fold:v 1 swap!! <-!!
     fold:f or <-!!
@@ -56,6 +56,42 @@ instruction:[
     "dstr" "d" declare! string! assign!
     "combine" declare! array!
 ]
+
+:"index" array! pull!
+index:[
+    :"i" literal! 1 swap!! =!! pull!!
+    [
+        length!!
+        i -!! 1 -!! push!!
+    ] in!!
+    pullfrom!!
+] pull!
+
+:"free" literal! 1 =! pull!
+:"busy" literal! 0 =! pull!
+free 32 replicate!
+:"registers" array! assign!
+:"getfree" array! pull!
+getfree:"copy" array!
+getfree:[
+    :"i" literal!
+    0 =!! pull!!
+
+    copy [
+        registers [1 replicate!! !!] map!! !!
+    ] in!! pull!!
+
+    copy [
+        [
+            free ==!! not!!
+            2 replicate!! !!
+            [i i 1 +!! =!! pull!!] ?!!
+        ] while!!
+    ] in!! pull!!
+    copy length in!! pullfrom!! i -!!
+] pull!
+getfree!
+
 instruction:[[a b c d] combine assign!]
 fold:v instruction:combine <-!
 fold:f concat <-!

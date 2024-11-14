@@ -246,7 +246,7 @@ string Text::capture(string close) {
 }
 Maybe<string> Text::final(string s) {
     if (s == "") {return peek();}
-    if (isnum(s[0])) {
+    if (isnum(s[0]) || (s[0] == '-' && isnum(s[1]))) {
         W->push(new Node(s, tliteral))->val = tonum(s);
         return peek();
     }
