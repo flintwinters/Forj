@@ -130,6 +130,26 @@ int fjin(Wrap* W) {
     if (!W->push(f)->exec(W)) {return 0;}
     return 1;
 }
+int fjhas(Wrap* W) {
+    W->pull(2);
+    string s = *(string*) W->pull()->val;
+    W->push(new Node("", tliteral))->val = W->pull()->in(s);
+    return 1;
+}
+int fjdir(Wrap* W) {
+    W->pull(2);
+    Node* n = W->pull();
+    W = W->pushscope(new Node("", tarray));
+    for (auto const& x : (map<string, Node*>) *n) {
+        word s = (word) new string(x.first);
+        W->push(new Node("", tarray));
+        W->peek()->push(new Node("", tstring))->val = s;
+        W->peek()->push(x.second);
+    }
+    n = W->t;
+    (W = W->pullscope())->push(n);
+    return 1;
+}
 int fjlength(Wrap* W) {
     W->pull(2);
     word len = W->pull()->sp+1;
@@ -219,6 +239,16 @@ int DEBUG(Wrap* W) {
     W->debugging = !W->debugging;
     return 1;
 }
+int explore(Wrap* W) {
+    BREAKPOINT(W);
+    printf("\"%s\":\n", W->peek(0)->name.c_str());
+    printf("(%s)\n", W->peek(0)->str().c_str());
+    for (auto const& x : (map<string, Node*>) *W->peek(0)) {
+        printf("(%s: %s)\n", x.first.c_str(), x.second->str().c_str());
+    }
+    W->pull();
+    return 1;
+}
 int loadfile(Wrap* W) {
     W->pull(2);
     Node* str = W->peek();
@@ -274,11 +304,6 @@ int execif(Wrap* W) {
         if (!W->pull()->exec(W)) {return 0;}
     }
     else {W->pull(2);}
-    return 1;
-}
-int equals(Wrap* W) {
-    W->pull(2);
-    W->push(new Node("", tliteral))->val = W->pull()->val == W->pull()->val;
     return 1;
 }
 int isempty(Wrap* W) {
@@ -384,9 +409,32 @@ int fjpush(Wrap* W) {
     W->push(W->peek(W->pull()->val));
     return 1;
 }
+int expandstring(Wrap* W) {
+    W->pull(2);
+    string* s = (string*) W->pull()->val;
+    W = W->pushscope(new Node(string(*s), tarray));
+    for (char c: *s) {
+        W->push(new Node("", tliteral))->val = c;
+    }
+    Node* n = W->t;
+    W->pullscope()->push(n);
+    return 1;
+}
+
 int errorexit(Maybe<string> m, string s) {
     printf("%s\n", m.str(s).c_str());
     return 1;
+}
+
+void eval(const char* c, Wrap* W) {
+    string s = string(c);
+    Text* T = new Text(s, W);
+    Maybe<string> m = T->parse();
+    while (m && !T->isempty()) {
+        m = T->parse();
+        if (!m) {return;}
+    }
+    printf("\033[0m%s\n", W->t->str().c_str());
 }
 int main(int argc, char** argv) {
     if (argc != 2) {
@@ -416,6 +464,8 @@ int main(int argc, char** argv) {
 
     W->t->addvar("breakpoint",  texec)->f = BREAKPOINT;
     W->t->addvar("debug",       texec)->f = DEBUG;
+    W->t->addvar("explore",     texec)->f = explore;
+    W->t->addvar("dir",         texec)->f = fjdir;
     W->t->addvar("loadfile",    texec)->f = loadfile;
     W->t->addvar("savefile",    texec)->f = savefile;
     W->t->addvar("appendfile",  texec)->f = appendfile;
@@ -424,12 +474,12 @@ int main(int argc, char** argv) {
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
     W->t->addvar("?",           texec)->f = execif;
-    W->t->addvar("==",          texec)->f = equals;
     W->t->addvar("not",         texec)->f = fjnot;
     W->t->addvar("isempty",     texec)->f = isempty;
     W->t->addvar("declare",     texec)->f = declare;
     W->t->addvar("assign",      texec)->f = assign;
     W->t->addvar("in",          texec)->f = fjin;
+    W->t->addvar("has",         texec)->f = fjhas;
     W->t->addvar("length",      texec)->f = fjlength;
     W->t->addvar("print",       texec)->f = printfunc;
     W->t->addvar("<-",          texec)->f = link;
@@ -446,6 +496,7 @@ int main(int argc, char** argv) {
     tliteral->addvar("not", texec)->f = W->t->addvar("not", texec)->f = fjnot;
     tliteral->addvar("and", texec)->f = W->t->addvar("and", texec)->f = fjand;
     tliteral->addvar("or", texec)->f = W->t->addvar("or", texec)->f = fjor;
+    tstring->addvar("expand", texec)->f = expandstring;
     W->t->addvar("system",      texec)->f = runsystem;
     W->t->addvar("pull",        texec)->f = fjpull;
     W->t->addvar("push",        texec)->f = fjpush;

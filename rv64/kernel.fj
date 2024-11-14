@@ -3,16 +3,16 @@
 
 .macro push reg
     addi sp, sp, 8
-	sd \reg, 0(sp)
+    sd \reg, 0(sp)
 .endm
 
 .macro pull reg
-	ld \reg, 0(sp)
-	addi sp, sp, -8
+    ld \reg, 0(sp)
+    addi sp, sp, -8
 .endm
 
 .macro peek reg
-	ld \reg, 0(sp)
+    ld \reg, 0(sp)
 .endm
 `
 
@@ -26,26 +26,38 @@
 "pull" rvpull <-! pull!
 "peek" rvpeek <-! pull!
 
-:"class" type!
-class:"#?" array! pull!
-class:#?:[
-	class:#?:"a" literal! pull!
-	a 1 swap!! =!! pull!!
-	[class:#?:a ==!!] map!!
+:"fold" pull!
+fold:"f" array!
+fold:"v" array!
+fold:"foldlink" fold <-!
+fold:[
+    v ->!! f ->!! in!!
+    1 v ->!! length!! <!!
+    [fold:foldlink ->!! !!] ?!!
 ] pull!
-debug!
-[0 2 1] 1
-class:#?!
-class:#?:a
+fold array! pull!
 
-(
+type:"#?" array! pull!
+type:#?:[
+    :"a" literal! pull!
+    a 1 swap!! =!! pull!!
+    [type:#?:a ==!!] map!!
+
+    fold:v 1 swap!! <-!!
+    fold:f or <-!!
+    fold!! fold:v ->!! !!
+] pull!
+
 :"instruction" type! pull!
-instruction:"a" string! pull!
-instruction:"b" string! pull!
-instruction:"c" string! pull!
-instruction:"d" string! pull!
-instruction:a "hi" =! pull!
 instruction:[
-    [a b c d] "combine" assign! 
+    "astr" "a" declare! string! assign!
+    "bstr" "b" declare! string! assign!
+    "cstr" "c" declare! string! assign!
+    "dstr" "d" declare! string! assign!
+    "combine" declare! array!
 ]
-instruction:combine)
+instruction:[[a b c d] combine assign!]
+fold:v instruction:combine <-!
+fold:f concat <-!
+fold!
+fold:v ->! !

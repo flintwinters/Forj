@@ -394,16 +394,16 @@ result = "[ 1 2 3 4 ]   [ 1 2 3 ]   [ 1 2 ]   [ 1 ]  3 "
 
 [object]
 challenge = """
-  "class" declare! pull!
-  class:[
+  "type" declare! pull!
+  type:[
     "construct" declare! pull!
     construct:[
-      "this" declare! class <-! pull!
+      "this" declare! type <-! pull!
     ]
   ]
-  class:construct:this ->! [1] in!
-  class:construct:this ->! ["a" declare! assign!!] in!
-  class:a
+  type:construct:this ->! [1] in!
+  type:construct:this ->! ["a" declare! assign!!] in!
+  type:a
 """
 result = "[ construct:[] ] 1"
 
@@ -464,33 +464,171 @@ result = "10 -27 0"
 [fold2]
 challenge = """
   :"fold" pull!
-  fold:"f" array!
-  fold:"v" array!
-  :"foldlink" fold <-!
+  fold:"f" array! pull!
+  fold:"v" array! pull!
+  fold:"foldlink" fold <-!
   fold:[
-    v ->!! f ->!! in!!
-    1 v ->!! length!! <!! [foldlink ->!! !!] ?!!
+    1 v ->!! length!! <!! [
+      v ->!! f ->!! in!! fold:foldlink ->!! !!
+    ] ?!!
   ] pull!
   fold array! pull!
   :"arr" array!
   arr:[1 2 3 4] + in!
   fold:v arr <-!
   fold:f + <-!
-  fold!
+  fold! !
+
+  arr:[5 4 3 2]
+  fold:v arr <-!
+  fold:f - <-!
+  fold! !
+
+  :"arr2" array! pull!
+  arr2:[1 2 5]
+  fold:v arr2 <-!
+  fold:f [*!! 1 +!!] <-!
+  fold! !
 """
-result = ""
+result = "10 8 12"
 
 [typecheck]
 challenge = """
-  :"class" type!
-  class:"is" array! pull!
-  class:is:"a" literal! pull!
-  class:is:[
+  type:"is" array! pull!
+  type:is:"a" literal! pull!
+  type:is:[
     a 1 swap!! =!! pull!!
-    [class:is:a ==!!] map!!
+    [type:is:a ==!!] map!!
   ] pull!
   [0 2 1] 1
-  class:is!
-  class:is:a
+  type:is!
+  type:is:a
 """
-result = "class:[]  [ 0 0 1 ]  1"
+result = "[ 0 0 1 ]  1"
+
+[typecheck2]
+challenge = """
+  :"fold" pull!
+  fold:"f" array! pull!
+  fold:"v" array! pull!
+  fold:"foldlink" fold <-!
+  fold:[
+    1 v ->!! length!! <!!
+    [
+      v ->!! f ->!! in!!
+      fold:foldlink ->!! !!
+    ] ?!!
+  ] pull!
+  fold array! pull!
+
+  (there's some toml related issue
+  with using hashes in strings,
+  so I used 'is' instead)
+  type:"is" array! pull!
+  type:is:[
+      :"a" literal! pull!
+      a 1 swap!! =!! pull!!
+      [type:is:a ==!!] map!!
+
+      fold:v 1 swap!! <-!!
+      fold:f or <-!!
+      fold!! fold:v ->!! !!
+  ] pull!
+
+  [0 2 0] 1
+  type:is!
+
+  [0 1 0 0 1 0] 1
+  type:is!
+
+  [1 1 1] 1
+  type:is!
+
+  [0x-1 2 4] 1
+  type:is!
+"""
+result = "0 1 1 0"
+
+[explore]
+challenge = """
+  :"a" explore!
+"""
+result = """
+[BREAK : a:[] ]
+"a":
+( )
+(#:  )
+"""
+
+[dir]
+challenge = """
+  :"a" array! dir!
+  a:[
+    :"test"
+  ] pull!
+  a dir!
+"""
+result = "[  [ \"#\" array:[] ]  ]   [  [ \"#\" array:[] ]   [ \"test\" test:[] ]  ]"
+
+[has]
+challenge = """
+  :"a" pull!
+  a:[
+    :"b"
+  ] pull!
+  a "b" has!
+  a "c" has!
+"""
+result = "1 0"
+
+[has2]
+challenge = """
+  (this is a proof of concept, runs in O of n, 
+  it's better to just use the inbuilt "has",
+  to take advantage of hashing)
+
+  :"fold" pull!
+  fold:"f" array! pull!
+  fold:"v" array! pull!
+  fold:"foldlink" fold <-!
+  fold:[
+    1 v ->!! length!! <!! [
+      v ->!! f ->!! in!!
+      fold:foldlink ->!! !!
+    ] ?!!
+  ] pull!
+  fold array! pull!
+
+  :"is" array! pull!
+  is:[
+    :"a" literal! pull!
+    a 1 swap!! =!! pull!!
+    [a ==!!] map!!
+
+    fold:v 1 swap!! <-!!
+    fold:f and <-!!
+    fold!! fold:v ->!! !!
+  ] pull!
+
+  "hasvar" declare! array! pull!
+  hasvar:[
+      "a" declare! array! pull!
+      a 1 swap!! string:expand!! <-!!
+      dir!!
+      [
+        !! pull!!
+        string:expand!!
+        a ->!! !! is!!
+      ] map !!
+
+      fold:v 1 swap!! <-!!
+      fold:f or <-!!
+      fold!! fold:v ->!! !!
+  ] pull!
+  :"a"
+  a:[:"b"] pull!
+  "b" hasvar!
+  a "c" hasvar!
+"""
+result = "1 0"
+

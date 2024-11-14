@@ -292,7 +292,9 @@ main:
 # 	j uartloop
 
 # nouart:
-
+	la t0, pagestart
+	slli t0, t0, 10
+	lb t0, 0(t0)
 	j main
 
 
