@@ -18,12 +18,37 @@
 
 "rvkernel.s" savefile!
 
-:"#stack" array!
-#stack
+:"rvpush" array! pull!
+rvpush:"str" "push\n" =! pull!
+:"rvpull" array! pull!
+rvpull:"str" "pull\n" =! pull!
+:"rvpeek" array! pull!
+rvpeek:"str" "peek\n" =! pull!
 
-:"rvpush" string! "push\n" =! pull!
-:"rvpull" string! "pull\n" =! pull!
-:"rvpeek" string! "peek\n" =! pull!
+:"mod" array! pull!
+mod:[
+    :"b" literal! 1 swap!! =!! pull!!
+    :"a" literal! 1 swap!! =!! pull!!
+    a b a b /!! *!! -!!
+] pull!
+
+:"tostr" array! pull!
+tostr:[
+    :"n" literal! 1 swap!! =!! pull!!
+    :"s" string! pull!!
+    :"num" array! pull!!
+    :"func" array! pull!!
+    func:[
+        num [
+            n 10 mod!! 0x30 +!!
+            n n 10 /!! =!!
+        ] in!!
+    ] pull!
+    [func!! pullfrom!!] while!!
+    num
+] pull!
+
+10 tostr!
 
 :"fold" array!  pull!
 fold:"f" array! pull!
@@ -31,7 +56,8 @@ fold:"v" array! pull!
 fold:"foldlink" fold <-!
 fold:[
     1 v ->!! length in!! pullfrom!! <!! [
-        v ->!! f ->!! in!! pull!! fold:foldlink ->!! !!
+        v ->!! f ->!! in!! pull!!
+        fold:foldlink ->!! !!
     ] ?!!
 ] pull!
 
@@ -55,7 +81,7 @@ instruction:[
     "cstr" "c" declare! string! assign!
     "dstr" "d" declare! string! assign!
     "combine" declare! array!
-]
+] pull!
 
 :"index" array! pull!
 index:[
@@ -72,10 +98,9 @@ index:[
 free 32 replicate!
 :"registers" array! assign!
 :"getfree" array! pull!
-getfree:"copy" array!
+getfree:"copy" array! pull!
 getfree:[
-    :"i" literal!
-    0 =!! pull!!
+    :"i" literal! 0 =!! pull!!
 
     copy [
         registers [1 replicate!! !!] map!! !!
@@ -88,12 +113,26 @@ getfree:[
             [i i 1 +!! =!! pull!!] ?!!
         ] while!!
     ] in!! pull!!
-    copy length in!! pullfrom!! i -!!
+    registers length in!! pullfrom!! i -!! 1 -!!
 ] pull!
-getfree!
 
-instruction:[[a b c d] combine assign!]
-fold:v instruction:combine <-!
-fold:f concat <-!
-fold!
-fold:v ->! !
+:"allocreg" array! pull!
+allocreg:[
+    :"i" literal! getfree!! =!!
+    registers i index!! busy =!! pull!!
+] pull!
+registers
+
+:"freereg" array! pull!
+freereg:[
+    :"i" literal! 1 swap!! =!!
+    registers i index!!
+    free =!! pull!!
+] pull!
+
+`
+fjtaskhandler:
+    ` "rvkernel.s" appendfile!
+
+
+
