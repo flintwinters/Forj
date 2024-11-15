@@ -33,16 +33,16 @@ _start:
 
 # Allocating 1 kernel page
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
-	la t0, pagestart
+	la t0, mstack
 	csrw pmpaddr0,t0
-	li t0, 0x0f
+	li t0, 0x0f0f0f
 	csrw pmpcfg0,t0
 
-	# la t0, pagestart
-	# slli t0, t0, 1
-	# csrw pmpaddr1,t0
-	# li t0, 0x0f
-	# csrw pmpcfg1,t0
+	la t0, pagestart
+	csrw pmpaddr1,t0
+	la t0, pageend
+	csrw pmpaddr2,t0
+
 
 	la a0, enterkernel
 	call virtualtophysical
@@ -119,7 +119,7 @@ v2ploop:
 	slli	t1, t1, 3
 
 	add		t0, t0, t1
-	lw		t0, 0(t0) # get the PTE
+	ld		t0, 0(t0) # get the PTE
 
 	srli	t0, t0, 10
 	slli	t0, t0, 12
@@ -154,9 +154,7 @@ v2ploop:
 # 	slli	a0, a0, 12
 
 # 	bne		t3, t4, p2vloop
-	
-# pageerror:
-# 	wfi
+# 	ret
 
 # 4. Otherwise, the PTE is valid. If pte.r=1 or pte.x=1, go to step 5. Otherwise, this PTE is a pointer to the
 # next level of the page table. Let i=i-1. If i<0, stop and raise a page-fault exception corresponding to
@@ -355,6 +353,7 @@ pagestart:
 .skip 16, 0
 .quad 0x2000080f
 .align 12
+pageend:
 
 .size	_start, .-_start
 .ident	"GCC: (gc891d8dc3e) 13.2.0"
