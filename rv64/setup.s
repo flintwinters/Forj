@@ -182,12 +182,21 @@ v2ploop:
 # ◦ If i>0, then this is a superpage translation and pa.ppn[i-1:0] = va.vpn[i-1:0].
 # ◦ pa.ppn[LEVELS-1:i] = pte.ppn[LEVELS-1:i].
 
+.include "rvkernel.s"
 
 mtrap:
 #
 # general trap handler:
 #
 # all registers will need to be saved including tX
+
+	csrw		mscratch, sp
+	la			sp, mstack
+	ld			sp, 0(sp)
+	push t2
+	push t3
+	push t4
+
 	# parse mcause
 	# 3.1.15. Machine Cause Register (mcause)
 	csrr	t3, mcause
@@ -229,6 +238,10 @@ mtrap:
 	li 		t2, 15
 	beq 	t2, t3, storepage
 
+	pull t4
+	pull t3
+	pull t2
+	csrr sp, mscratch
 	mret
 
 # debugging:
@@ -245,6 +258,11 @@ instpage:			# 12
 loadpage: 			# 13
 storepage:			# 15
 	#
+
+	pull t4
+	pull t3
+	pull t2
+	csrr sp, mscratch
 	mret
 
 interrupts:
@@ -252,22 +270,33 @@ interrupts:
 
 	li		t2, 0x07
 	beq 	t2, t3, timerhandler
+
+	pull t4
+	pull t3
+	pull t2
+	csrr sp, mscratch
 	mret
 
 timerhandler:
-.include "rvkernel.s"
+	j fjtaskhandler
+exittimerhandler:
 	# add 30k to mtimecmp
 	li      t3, 0x2004000
 	ld      t2, 0(t3)
-	li		t4, 30000
+	li		t4, 80000
 	add 	t2, t2, t4
 	sd		t2, 0(t3)
 
+	pull t4
+	pull t3
+	pull t2
+	csrr sp, mscratch
     mret
 
 .align 12
 mstack:
-.skip 4096,0
+.quad mstack
+.align 12
 
 # uart
 # https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
@@ -292,9 +321,11 @@ main:
 # 	j uartloop
 
 # nouart:
-	la t0, pagestart
-	slli t0, t0, 10
-	lb t0, 0(t0)
+
+	# To create a page load fault:
+	# la t0, pagestart
+	# slli t0, t0, 10
+	# lb t0, 0(t0)
 	j main
 
 

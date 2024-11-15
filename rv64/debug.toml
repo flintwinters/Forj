@@ -11,7 +11,9 @@
     displays = [
         "/x $sp",
         "/x $mstatus",
+        "/x $mscratch",
         "/x $mtval",
+        "/8gx mstack",
         # "/i $pc",
         "/i $mepc",
         "/x $mcause",
