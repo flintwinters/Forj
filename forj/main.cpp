@@ -1,4 +1,5 @@
 #include "forj.cpp"
+#include <cstdio>
 #include <type_traits>
 
 template <typename T> string Maybe<T>::str(string s) {
@@ -268,6 +269,7 @@ int savefile(Wrap* W) {
     delete str;
     str = (string*) W->pull()->val;
     fwrite(str->c_str(), str->size(), 1, FP);
+    fclose(FP);
     delete str;
     return 1;
 }
@@ -278,6 +280,7 @@ int appendfile(Wrap* W) {
     delete str;
     str = (string*) W->pull()->val;
     fwrite(str->c_str(), str->size(), 1, FP);
+    fclose(FP);
     delete str;
     return 1;
 }
