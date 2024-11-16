@@ -174,6 +174,15 @@ result = ""
 challenge = "1 2 1 pull ?!"
 result = "1"
 
+[swap]
+challenge = """
+  9 8 7 6 5 4 3 2 1 0 1 swap!
+  5 swap!
+"""
+result = """
+9 8 7 6 1 4 3 2 0 5
+"""
+
 [verboseclosure]
 challenge = """
   "n" declare! literal!
@@ -613,6 +622,14 @@ challenge = """
   a dir!
 """
 result = "[  [ \"#\" array:[] ]  ]   [  [ \"#\" array:[] ]   [ \"test\" test:[] ]  ]"
+
+[get]
+challenge = """
+  :"a" literal! ["b" declare!! literal!!] in!
+  a:b 1 =!
+  a "b" get!
+"""
+result = "0 1 0 1"
 
 [has]
 challenge = """

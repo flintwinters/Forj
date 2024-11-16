@@ -156,6 +156,13 @@ int fjdir(Wrap* W) {
     (W = W->pullscope())->push(n);
     return 1;
 }
+int fjget(Wrap* W) {
+    W->pull(2);
+    string s = *(string*) W->pull()->val;
+    Node* n = W->peek();
+    W->push(n->search(s));
+    return 1;
+}
 int fjlength(Wrap* W) {
     W->pull(2);
     word len = W->t->sp+1;
@@ -222,18 +229,18 @@ int fjlessthan(Wrap* W) {
     W->push(new Node("", tliteral))->val = w;
     return 1;
 }
+void breakpointhelper(Wrap* W) {
+
+}
 int BREAKPOINT(Wrap* W) {
     W->pull(2);
     if (W->t->isempty()) {
         printf("[\033[31mBREAK\033[35;1m\033[0m]\n");
-        return 1;
     }
-    if (W->peek()->gettype() == tstring) {
-        string s = *(string*) W->pull()->val;
-        printf("[\033[31mBREAK \033[35;1m%s\033[0m:%s]\n", s.c_str(), W->t->str().c_str());
-        return 1;
+    else {
+        printf("[\033[31mBREAK \033[0m:%s]\n", W->t->str().c_str());
     }
-    printf("[\033[31mBREAK \033[0m:%s]\n", W->t->str().c_str());
+    breakpointhelper(W);
     return 1;
 }
 int fjexit(Wrap* W) {
@@ -299,7 +306,7 @@ int splitat(Wrap* W) {
     delete str;
     return 1;
 }
-int swapnode(Wrap* W) {
+int fjswap(Wrap* W) {
     W->pull(2); 
     word a = W->pull()->val;
     W->t->swapi(a);
@@ -490,14 +497,14 @@ int main(int argc, char** argv) {
     W->t->addvar("debug",       texec)->f = DEBUG;
     W->t->addvar("explore",     texec)->f = explore;
     W->t->addvar("dir",         texec)->f = fjdir;
+    W->t->addvar("get",         texec)->f = fjget;
     W->t->addvar("loadfile",    texec)->f = loadfile;
     W->t->addvar("savefile",    texec)->f = savefile;
     W->t->addvar("appendfile",  texec)->f = appendfile;
     W->t->addvar("splitat",     texec)->f = splitat;
-    W->t->addvar("swap",        texec)->f = swapnode;
+    W->t->addvar("swap",        texec)->f = fjswap;
     W->t->addvar("concat",      texec)->f = stringconcat;
     W->t->addvar("include",     texec)->f = includefile;
-    W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("while",       texec)->f = fjwhile;
     W->t->addvar("not",         texec)->f = fjnot;
     W->t->addvar("isempty",     texec)->f = isempty;
@@ -507,6 +514,7 @@ int main(int argc, char** argv) {
     W->t->addvar("has",         texec)->f = fjhas;
     W->t->addvar("length",      texec)->f = fjlength;
     W->t->addvar("print",       texec)->f = printfunc;
+    W->t->addvar("?",           texec)->f = execif;
     W->t->addvar("<-",          texec)->f = link;
     W->t->addvar("->",          texec)->f = lunk;
     W->t->addvar("=",           texec)->f = setval;

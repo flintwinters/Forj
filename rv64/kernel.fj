@@ -102,7 +102,6 @@ regs:[
     "s8"    "s9"    "s10"   "s11"
     "t3"    "t4"    "t5"    "t6"
 ] pull!
-regs breakpoint! pull!
 :"getfree" array! pull!
 getfree:"copy" array! pull!
 getfree:[
@@ -135,19 +134,28 @@ freereg:[
     free =!! pull!!
 ] pull!
 
+:"setstr" array! pull!
+setstr:[
+    :"s" 1 swap!! <-!!
+    s ->!!
+    s ->!! ["r" declare!! string!! pull!!] in!!
+    "r" get!! 1 swap!!
+    regs 1 swap!! at!!
+    =!! pull!! pull!!
+] pull!
+
 (The PTE allocator
 Takes in a virtual address a1 [x11],
 Gets the first available page [naive approach],
 Repeats until the physical address is depleted
 [page table depth is 3])
 registers 11 at! busy =! pull! (a1 - virtual address)
-:"a" literal! allocreg! =! pull! (PT addr)
-:"v" literal! allocreg! =! pull!(PTE)
-regs breakpoint! pull!
+:"a" literal! allocreg! =! setstr! (PT addr)
+:"v" literal! allocreg! =! setstr! (PTE)
 [`
 PTEallocator:
-   la  ` regs a at! `, pagestart
-   bne ` regs v at! `, x0, PTEallocator
+   la  ` a:r `, pagestart
+   bne ` v:r `, x0, PTEallocator
 `
 ] concat fold! fold:v ->! !
 11 freereg! pull!
@@ -157,31 +165,77 @@ v freereg! pull!
 (Check first bit of PTE, else i++)
 
 "rvkernel.s" appendfile!
-breakpoint! regs breakpoint! pull!
 
+:"getr" array! pull!
+getr:[
+    "r" get!! 1 swap!! pull!!
+] pull!
 
+:"rvmod" array! pull!
+rvmod:[
+    :"b" 1 swap!! <-!!
+    :"a" 1 swap!! <-!!
+    :"c" literal! allocreg!! =!!
+    setstr!!
+    `
+    div ` c getr!! `, ` a ->!! getr!! `, ` b ->!! getr!!`
+    mul ` c getr!! `, ` c getr!! `, ` b ->!! getr!!`
+    sub ` c getr!! `, ` a ->!! getr!! `, ` c getr!!
+    c
+] pull!
+
+:"rv+=" array! pull!
+rv+=:[
+    :"b" 1 swap!! <-!!
+    :"a" 1 swap!! <-!!
+`    add ` a ->!! getr!!`, ` a ->!! getr!! `, ` b ->!! getr!!
+] pull!
+
+:"rv+" array! pull!
+rv+:[
+    :"a" 1 swap!! <-!!
+`    addi ` a ->!! getr!! `, ` a ->!! getr!! `, `
+] pull!
 
 (threadstore data structure:
 - one i64 storing pid of last inst
 - max pid
 - [threadnum] pointers to pcbs)
-:"a" literal! allocreg! =! pull!
-:"i" literal! allocreg! =! pull!
-:"max" literal! allocreg! =! pull!
-[`
+:"a" literal! allocreg! =! setstr!
+:"i" literal! allocreg! =! setstr!
+:"max" literal! allocreg! =! setstr!
+:"modres" literal! allocreg! =! pull!
+modres:"r" string! pull!
+[
+`
 
 fjtaskhandler:
-    la  ` regs a at! `, threadstore
-    ld  ` regs i at! `, 0(` regs a at! `)
-    ld  ` regs max at! `, 1(` regs a at! `)`
+    la  ` a:r `, threadstore
+    ld  ` i:r `, 0(` a:r `)
+    ld  ` max:r `, 8(` a:r `)
+`
+    i rv+! `1`
+`
+    sd  ` i:r `, 0(` a:r `)`
+    i max rvmod! modres assign!
+
+`
+    li  ` i:r `, 8
+`
+    modres rv+! `2`
+    `
+    mul ` i:r `, ` i:r `, ` modres:r
+`
+`
+    a i rv+=!
+    `
+    ld  ` a:r `, 0(` a:r `)
+    csrw mepc, ` a:r
 
     (i now contains pid)
-
+`
+    j exittimerhandler
+`
 
 ] concat fold! fold:v ->! !
 "rvkernel.s" appendfile!
-
-
-`
-    j exittimerhandler
-` "rvkernel.s" appendfile!

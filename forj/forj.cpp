@@ -136,6 +136,10 @@ public:
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->search(s);
         if (m) {return m;}
+        if (!t->isempty()) {
+            m = peek()->search(s);
+            if (m) {return m;}
+        }
         if (prev) {return prev->global(s);}
         return m;
     }

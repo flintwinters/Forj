@@ -1,5 +1,5 @@
 breakpoints = [
-    "BREAKPOINT",
+    "main.cpp:breakpointhelper",
     "errorexit",
     "forj.cpp:debug",
     # "assign",

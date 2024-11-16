@@ -282,7 +282,7 @@ exittimerhandler:
 	# add 30k to mtimecmp
 	li      t3, 0x2004000
 	ld      t2, 0(t3)
-	li		t4, 80000
+	li		t4, 150000
 	add 	t2, t2, t4
 	sd		t2, 0(t3)
 
@@ -302,6 +302,10 @@ mstack:
 # - [threadnum] pointers to pcbs)
 threadstore:
 .quad 0
+.quad 0x0000000000000003
+.quad userthread1
+.quad userthread2
+.quad userthread3
 .align 12
 
 # uart
@@ -334,6 +338,14 @@ main:
 	# lb t0, 0(t0)
 	j main
 
+userthread1:
+	j userthread1
+
+userthread2:
+	j userthread2
+
+userthread3:
+	j userthread3
 
 # align to 2^12 = 4096
 # Sv39 page tables contain 2^9 Page Table Entries
@@ -353,12 +365,15 @@ main:
 pagestart:
 .skip 16, 0
 .quad 0x20001001
+.quad 0x20001001
 .align 12
 
+.quad 0x20001401
 .quad 0x20001401
 .align 12
 
 .skip 16, 0
+.quad 0x2000080f
 .quad 0x2000080f
 .align 12
 pageend:
