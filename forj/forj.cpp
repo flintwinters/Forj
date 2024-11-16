@@ -244,7 +244,10 @@ string Text::capture(string close) {
     while (peek() == "") {pull();}
     string str = "";
     Maybe<int> i = find(close);
-    while (!i) {str += pull(); i = find(close);}
+    while (!i) {
+        str += pull();
+        i = find(close);
+    }
     split(i, 1);
     str += pull();
     return str;

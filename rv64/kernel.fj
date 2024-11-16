@@ -186,9 +186,8 @@ rvmod:[
 
 :"rv+=" array! pull!
 rv+=:[
-    :"b" 1 swap!! <-!!
     :"a" 1 swap!! <-!!
-`    add ` a ->!! getr!!`, ` a ->!! getr!! `, ` b ->!! getr!!
+`    add ` a ->!! getr!!`, ` a ->!! getr!! `, `
 ] pull!
 
 :"rv+" array! pull!
@@ -200,34 +199,45 @@ rv+:[
 (threadstore data structure:
 - one i64 storing pid of last inst
 - max pid
-- [threadnum] pointers to pcbs)
+- [threadnum] thread pc)
 :"a" literal! allocreg! =! setstr!
+:"a2" literal! allocreg! =! setstr!
 :"i" literal! allocreg! =! setstr!
 :"max" literal! allocreg! =! setstr!
-:"modres" literal! allocreg! =! pull!
+:"eight" literal! allocreg! =! setstr!
+:"modres" literal! pull!
 modres:"r" string! pull!
 [
 `
-
 fjtaskhandler:
     la  ` a:r `, threadstore
     ld  ` i:r `, 0(` a:r `)
     ld  ` max:r `, 8(` a:r `)
+
+    li   ` eight:r `, 8
 `
+    i rv+! `2
+    mul  ` i:r `, ` i:r `, ` eight:r `
+    add  ` a2:r `, ` a:r `, ` i:r `
+    csrr ` i:r `, mepc
+    sd   ` i:r `, 0(` a2:r `)
+    ld   ` i:r `, 0(` a:r `)
+`
+    a2 freereg! pull!
     i rv+! `1`
+    modres allocreg! =! setstr!
 `
     sd  ` i:r `, 0(` a:r `)`
-    i max rvmod! modres assign!
-
+    i max rvmod! modres assign! 
 `
-    li  ` i:r `, 8
 `
     modres rv+! `2`
     `
-    mul ` i:r `, ` i:r `, ` modres:r
+    mul ` i:r `, ` eight:r `, ` modres:r
+    modres freereg! pull!
 `
 `
-    a i rv+=!
+    a rv+=! i:r
     `
     ld  ` a:r `, 0(` a:r `)
     csrw mepc, ` a:r

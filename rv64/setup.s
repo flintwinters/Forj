@@ -33,7 +33,7 @@ _start:
 
 # Allocating 1 kernel page
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
-	li t0, 0x18080f0f
+	li t0, 0x10080f0f
 	csrw pmpcfg0,t0
 
 	la 		t0, enterkernel
@@ -82,7 +82,7 @@ _start:
     li      t0, 0xa0 
     csrs    mie, t0
 	# set supervisor kernel location
-	la      t0, enterkernel
+	la      t0, userthread1
   	csrw    mepc, t0
 
     mret
@@ -302,7 +302,7 @@ mstack:
 # - [threadnum] pointers to pcbs)
 threadstore:
 .quad 0
-.quad 0x0000000000000003
+.quad 3
 .quad userthread1
 .quad userthread2
 .quad userthread3
@@ -339,13 +339,33 @@ main:
 	j main
 
 userthread1:
+	la t1, uservalue1
+	ld t0, 0(t1)
+	addi t0, t0, 1
+	sd t0, 0(t1)
 	j userthread1
 
 userthread2:
+	la t1, uservalue2
+	ld t0, 0(t1)
+	addi t0, t0, 1
+	sd t0, 0(t1)
 	j userthread2
 
 userthread3:
+	la t1, uservalue3
+	ld t0, 0(t1)
+	addi t0, t0, 1
+	sd t0, 0(t1)
 	j userthread3
+
+uservalue1:
+.quad 0
+uservalue2:
+.quad 0
+uservalue3:
+.quad 0
+
 
 # align to 2^12 = 4096
 # Sv39 page tables contain 2^9 Page Table Entries
