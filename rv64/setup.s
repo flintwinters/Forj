@@ -33,16 +33,17 @@ _start:
 
 # Allocating 1 kernel page
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
-	la t0, mstack
-	csrw pmpaddr0,t0
-	li t0, 0x0f0f0f
+	li t0, 0x18080f0f
 	csrw pmpcfg0,t0
 
-	la t0, pagestart
-	csrw pmpaddr1,t0
-	la t0, pageend
-	csrw pmpaddr2,t0
-
+	la 		t0, enterkernel
+	csrw 	pmpaddr0, t0
+	la 		t0, pagestart
+	csrw 	pmpaddr1, t0
+	la 		t0, pageend
+	csrw 	pmpaddr2, t0
+	li 		t0, 0xffffffff
+	csrw 	pmpaddr2, t0
 
 	la a0, enterkernel
 	call virtualtophysical
@@ -293,7 +294,14 @@ exittimerhandler:
 
 .align 12
 mstack:
-.quad mstack
+.quad mstack # the starting sp
+.align 11
+# (threadstore data structure:
+# - one i64 storing pid of last inst
+# - max pid
+# - [threadnum] pointers to pcbs)
+threadstore:
+.quad 0
 .align 12
 
 # uart

@@ -499,6 +499,44 @@ challenge = """
 """
 result = "10 8 12"
 
+[fold3]
+challenge = """
+  :"fold" pull!
+  fold:"f" array! pull!
+  fold:"v" array! pull!
+  fold:"inner" array! pull!
+  fold:"foldlink" fold:inner <-!
+  fold:[
+    f 1 swap!! <-!!
+    v 1 swap!! <-!!
+    inner:[
+      1 v ->!! length in!! pullfrom!! <!!
+      [
+        v ->!! f ->!! in!! pull!!
+        fold:foldlink ->!! !!
+      ] ? !!
+    ] pull!
+    inner!!
+  ] pull!
+  fold array! pull!
+  :"arr" array! pull!
+  arr:[1 2 3 4] + in! pull!
+  arr + fold!
+  arr breakpoint!
+
+  arr:[5 4 3 2] pull!
+  arr - fold!
+  arr
+
+  :"arr2" array! pull!
+  arr2:[1 2 5] pull!
+  arr2 [*!! 1 +!!] fold!
+  arr2
+"""
+result = """
+[BREAK :  [ 10 ]  ]
+  [ 8 ]   [ 8 ]   [ 12 ]"""
+
 [typecheck]
 challenge = """
   type:"is" array! pull!

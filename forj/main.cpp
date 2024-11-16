@@ -21,13 +21,16 @@ template <typename T> string Maybe<T>::str(string s) {
 template <typename T> string Stack<T>::str(string (tostr)(T)) {
     string s = " ";
     for (int i = sp; i >= 0; i--) {
-        s += tostr(peek(i)) + " ";
+        T n = peek(i);
+        s += tostr(
+            n
+        ) + " ";
     }
     return s;
 }
 
 string Node::str() {
-    return Stack::str([](Node* n)->string {
+    auto s = Stack::str([](Node* n)->string {
         if (n->gettype() == tcontext) {return "{"+n->str()+"}";}
         if (n->gettype() == tliteral) {return "\033[90;1m" + to_string(n->val) + "\033[0m";}
         if (n->gettype() == texec)    {return "\033[31m" + n->name + "\033[0m";}
@@ -42,9 +45,12 @@ string Node::str() {
             }
             return "\033[33;1m" + s + "\033[0m";}
         if (n->isempty()) {return "\033[34m" + n->name + ":" + "[]\033[0m";}
-        if (n->gettype() == tarray) {return " ["+n->str()+"] ";}
+        if (n->gettype() == tarray) {
+            return " ["+n->str()+"] ";
+        }
         return "["+n->str()+"]";
     });
+    return s;
 }
 
 // functions to be executed when bang is called on a type
@@ -378,10 +384,8 @@ int replicate(Wrap* W) {
 int stringconcat(Wrap* W) {
     W->pull(2); 
     string* a = (string*) W->pull()->val;
-    string* b = (string*) W->peek()->val;
-    W->peek()->val = (word) new string(*b+*a);
-    delete a;
-    delete b;
+    string* b = (string*) W->pull()->val;
+    W->push(new Node("", tstring))->val = (word) new string(*b+*a);
     return 1;
 }
 int includefile(Wrap* W) {

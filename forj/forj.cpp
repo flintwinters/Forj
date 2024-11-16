@@ -116,6 +116,7 @@ public:
         }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
+    string tostr(Node* n);
     string str();
 };
 // "Line" of execution
@@ -289,8 +290,8 @@ Maybe<string> Text::parse() {
         split(i);
         pull();
         if (i) {W->push(new Node(peek(), tbang))->val = i;}
-        else {
-            if (!W->peek()->exec(W)) {return Fail<string>("function errored");}
+        else if (!W->peek()->exec(W)) {
+            return Fail<string>("function errored");
         }
         W->searching = false;
         return s;

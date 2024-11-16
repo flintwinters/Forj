@@ -48,17 +48,22 @@ tostr:[
     num
 ] pull!
 
-10 tostr!
-
 :"fold" array!  pull!
 fold:"f" array! pull!
 fold:"v" array! pull!
-fold:"foldlink" fold <-!
+fold:"inner" array! pull!
+fold:"foldlink" fold:inner <-!
 fold:[
-    1 v ->!! length in!! pullfrom!! <!! [
+    f 1 swap!! <-!!
+    v 1 swap!! <-!!
+    inner:[
+        1 v ->!! length in!! pullfrom!! <!!
+        [
         v ->!! f ->!! in!! pull!!
         fold:foldlink ->!! !!
-    ] ?!!
+        ] ? !!
+    ] pull!
+    inner!!
 ] pull!
 
 :"contains" array! pull!
@@ -69,22 +74,11 @@ contains:[
     a 1 swap!! =!! pull!!
     [a ==!!] map!!
 
-    fold:v 1 swap!! <-!!
-    fold:f or <-!!
-    fold!! fold:v ->!! !!
+    or fold!! fold:v ->!! !!
 ] pull!
 
-:"instruction" type! pull!
-instruction:[
-    "astr" "a" declare! string! assign!
-    "bstr" "b" declare! string! assign!
-    "cstr" "c" declare! string! assign!
-    "dstr" "d" declare! string! assign!
-    "combine" declare! array!
-] pull!
-
-:"index" array! pull!
-index:[
+:"at" array! pull!
+at:[
     :"i" literal! 1 swap!! =!! pull!!
     [
         length!!
@@ -97,11 +91,22 @@ index:[
 :"busy" literal! 0 =! pull!
 free 32 replicate!
 :"registers" array! assign!
+:"regs" array! pull!
+regs:[
+    "zero"  "ra"    "sp"    "gp"
+    "tp"    "t0"    "t1"    "t2"
+    "s0"    "s1"    "a0"    "a1"
+    "a2"    "a3"    "a4"    "a5"
+    "a6"    "a7"    "s2"    "s3"
+    "s4"    "s5"    "s6"    "s7"
+    "s8"    "s9"    "s10"   "s11"
+    "t3"    "t4"    "t5"    "t6"
+] pull!
+regs breakpoint! pull!
 :"getfree" array! pull!
 getfree:"copy" array! pull!
 getfree:[
     :"i" literal! 0 =!! pull!!
-
     copy [
         registers [1 replicate!! !!] map!! !!
     ] in!! pull!!
@@ -118,22 +123,65 @@ getfree:[
 
 :"allocreg" array! pull!
 allocreg:[
-    :"i" literal! getfree!! =!!
-    registers i index!! busy =!! pull!!
+    :"i" literal! getfree!!=!!
+
+    registers i at!! busy =!! pull!!
 ] pull!
-registers
 
 :"freereg" array! pull!
 freereg:[
     :"i" literal! 1 swap!! =!!
-    registers i index!!
+    registers i at!!
     free =!! pull!!
 ] pull!
 
+(The PTE allocator
+Takes in a virtual address a1 [x11],
+Gets the first available page [naive approach],
+Repeats until the physical address is depleted
+[page table depth is 3])
+registers 11 at! busy =! pull! (a1 - virtual address)
+:"a" literal! allocreg! =! pull! (PT addr)
+:"v" literal! allocreg! =! pull!(PTE)
+regs breakpoint! pull!
+[`
+PTEallocator:
+   la  ` regs a at! `, pagestart
+   bne ` regs v at! `, x0, PTEallocator
 `
+] concat fold! fold:v ->! !
+11 freereg! pull!
+a freereg! pull!
+v freereg! pull!
+(loop to find free PTE)
+(Check first bit of PTE, else i++)
+
+"rvkernel.s" appendfile!
+breakpoint! regs breakpoint! pull!
+
+
+
+(threadstore data structure:
+- one i64 storing pid of last inst
+- max pid
+- [threadnum] pointers to pcbs)
+:"a" literal! allocreg! =! pull!
+:"i" literal! allocreg! =! pull!
+:"max" literal! allocreg! =! pull!
+[`
+
 fjtaskhandler:
+    la  ` regs a at! `, threadstore
+    ld  ` regs i at! `, 0(` regs a at! `)
+    ld  ` regs max at! `, 1(` regs a at! `)`
+
+    (i now contains pid)
+
+
+] concat fold! fold:v ->! !
+"rvkernel.s" appendfile!
+
+
+`
     j exittimerhandler
 ` "rvkernel.s" appendfile!
-
-
-
