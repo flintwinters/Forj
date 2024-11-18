@@ -110,7 +110,13 @@ public:
             if (m) {return m;}
         }
         Maybe<Node*> m = gettype()->getvar(s);
-        if (m) {return m;}
+        if (m) {
+            Node* n = new Node("", tarray);
+            n->push(this);
+            n->push(m);
+            n->push(new Node("!!", tbang))->val = 1;
+            return n;
+        }
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
     string tostr(Node* n);
@@ -133,10 +139,10 @@ public:
     Maybe<Node*> global(string s) {
         Maybe<Node*> m = t->search(s);
         if (m) {return m;}
-        if (!t->isempty()) {
-            m = peek()->search(s);
-            if (m) {return m;}
-        }
+        // if (!t->isempty()) {
+        //     m = peek()->search(s);
+        //     if (m) {return m;}
+        // }
         if (prev) {return prev->global(s);}
         return m;
     }
