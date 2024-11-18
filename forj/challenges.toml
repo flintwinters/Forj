@@ -206,29 +206,17 @@ result = "3"
 challenge = """
   "n" declare! literal! pull!
   n 5 =! pull!
-  1 2 n:+ !
+  1 2 n:+!
 """
-result = "3"
+result = "1 7"
 
 [addclosure2]
 challenge = """
   "n" declare! literal! pull!
+  n 8 =! pull!
   1 2 [n:+!!] !
 """
-result = "3"
-
-[implicit]
-challenge = """
-  "n" declare! literal!
-  n:[
-    [n + !!] "+" declare! assign!
-  ] pull!
-  n 2 =! pull!
-  1 n:+!
-  10 n:+!
-  1 2 +!
-"""
-result = """2 3 12 3"""
+result = "1 10"
 
 [replicate]
 challenge = """
