@@ -18,13 +18,49 @@
 
 "rvkernel.s" savefile!
 
-:"rvpush" array! pull!
-rvpush:"str" "push\n" =! pull!
-:"rvpull" array! pull!
-rvpull:"str" "pull\n" =! pull!
-:"rvpeek" array! pull!
-rvpeek:"str" "peek\n" =! pull!
+(typecheck.  1 literal #? == true)
+:"#?" array! pull!
+#?:[
+    1 swap!!
+    "#" get!!
+    1 swap!! pull!!
+    is!!
+] pull!
 
+literal :"link" assign!
+
+literal 1 replicate! ! :"llnode" assign!
+llnode:[
+    :"this" link! pull!
+    :"#=" array! pull!
+    :"value" literal! pull!
+    :"next" link! pull!
+    :"n" array! pull!
+    :"append" array! pull!
+    #=:[
+        0 push!! this <-!!
+    ] pull!
+    n:[next ->!!] pull!
+    append:[
+        n breakpoint!! [
+            n "next" get!!
+            2 push!! <-!!
+            pull!!
+        ] ?!!
+        n not!! [
+            n 1 push!! <-!!
+        ] ?!!
+    ] pull!
+] pull!
+debug!
+llnode:#
+:"node" llnode! node:# breakpoint!
+:"node2" llnode! breakpoint! node:append !
+node:#
+node:#:n
+node:n
+node:#:n!
+debug!
 :"mod" array! pull!
 mod:[
     :"b" literal! 1 swap!! =!! pull!!
@@ -49,8 +85,8 @@ tostr:[
 ] pull!
 
 :"fold" array!  pull!
-fold:"f" array! pull!
-fold:"v" array! pull!
+fold:"f" link! pull!
+fold:"v" link! pull!
 fold:"inner" array! pull!
 fold:"foldlink" fold:inner <-!
 fold:[
@@ -136,7 +172,7 @@ freereg:[
 
 :"setstr" array! pull!
 setstr:[
-    :"s" 1 swap!! <-!!
+    :"s" link! 1 swap!! <-!!
     s ->!!
     s ->!! ["r" declare!! string!! pull!!] in!!
     "r" get!! 1 swap!!
@@ -173,8 +209,8 @@ getr:[
 
 :"rvmod" array! pull!
 rvmod:[
-    :"b" 1 swap!! <-!!
-    :"a" 1 swap!! <-!!
+    :"b" link! 1 swap!! <-!!
+    :"a" link! 1 swap!! <-!!
     :"c" literal! allocreg!! =!!
     setstr!!
     `
@@ -186,13 +222,13 @@ rvmod:[
 
 :"rv+=" array! pull!
 rv+=:[
-    :"a" 1 swap!! <-!!
+    :"a" link! 1 swap!! <-!!
 `    add ` a ->!! getr!!`, ` a ->!! getr!! `, `
 ] pull!
 
 :"rv+" array! pull!
 rv+:[
-    :"a" 1 swap!! <-!!
+    :"a" link! 1 swap!! <-!!
 `    addi ` a ->!! getr!! `, ` a ->!! getr!! `, `
 ] pull!
 

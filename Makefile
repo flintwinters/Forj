@@ -10,10 +10,11 @@ all: kernel
 		-cpu rv64 \
 		-nographic \
 		-serial mon:stdio \
-		-bios none \
-		-kernel forjos & \
+		-bios opensbi \
+		-kernel forjos \
+		-drive format=raw,file=floppy.img,if=virtio &\
 	gdb-multiarch -l 2 -q forjos -x `pwd`/pyg.py -ex "py connect('$(CHALLENGE)')" \
-	) 
+	)
 	pkill -f qemu-system-riscv64
 
 kernel: fj

@@ -84,7 +84,6 @@ public:
     }
 
     Node(Node& n): map<string, Node*>(n), Stack<Node*>(n) {
-        name = n.name;
         settype(n.gettype());
         parent = n.parent;
         val = n.val;
@@ -110,10 +109,8 @@ public:
             Maybe<Node*> m = parent->getvar(s);
             if (m) {return m;}
         }
-        if (gettype()) {
-            Maybe<Node*> m = gettype()->getvar(s);
-            if (m) {return m;}
-        }
+        Maybe<Node*> m = gettype()->getvar(s);
+        if (m) {return m;}
         return Fail<Node*>("Couldn't find string '" + s + "' in scope '" + name + "'");
     }
     string tostr(Node* n);

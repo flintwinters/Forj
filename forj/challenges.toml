@@ -644,9 +644,9 @@ result = "1 0"
 
 [has2]
 challenge = """
-  (this is a proof of concept, runs in O of n, 
+  (this is a proof of concept, runs in O[n] time, 
   it's better to just use the inbuilt "has",
-  to take advantage of hashing)
+  to take advantage of hashing, for O[1])
 
   :"fold" pull!
   fold:"f" array! pull!

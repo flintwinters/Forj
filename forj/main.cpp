@@ -58,6 +58,9 @@ int typefunc(Wrap* W) {
     W->pull();
     Node* t = W->pull();
     W->peek()->settype(t);
+    if (t->in("#=")) {
+        W->push(t->getvar("#="))->exec(W);
+    }
     return 1;
 }
 int contextfunc(Wrap* W) {
@@ -83,7 +86,9 @@ int bangfunc(Wrap* W) {
     }
     return 1;
 }
-int execfunc(Wrap* W) {return W->peek()->f(W);}
+int execfunc(Wrap* W) {
+    return W->peek()->f(W);
+}
 int arrayfunc(Wrap* W) {
     Node* n = W->pull(); 
     W->pull();
@@ -134,6 +139,12 @@ int fjin(Wrap* W) {
     Node* f = W->pull();
     W = W->pushscope(W->peek());
     if (!W->push(f)->exec(W)) {return 0;}
+    return 1;
+}
+int fjis(Wrap* W) {
+    W->pull(2);
+    word b = (W->pull() == W->pull());
+    W->push(new Node("", tliteral))->val = b;
     return 1;
 }
 int fjhas(Wrap* W) {
@@ -511,6 +522,7 @@ int main(int argc, char** argv) {
     W->t->addvar("declare",     texec)->f = declare;
     W->t->addvar("assign",      texec)->f = assign;
     W->t->addvar("in",          texec)->f = fjin;
+    W->t->addvar("is",          texec)->f = fjis;
     W->t->addvar("has",         texec)->f = fjhas;
     W->t->addvar("length",      texec)->f = fjlength;
     W->t->addvar("print",       texec)->f = printfunc;
