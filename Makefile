@@ -60,6 +60,14 @@ rv:
 		-kernel forjos \
 	)
 
+# https://askubuntu.com/questions/484308/create-floppy-images
+# creates a fake FAT drive with 1440 blocks and mounts it
+floppy:
+	@cd rv64 && \
+	mkfs.msdos -F 32 -C ./floppy.img/ 1440 && \
+	mkdir drive && \
+	sudo mount -o loop floppy.img disk
+
 fjrun:
 	cd forj && \
 	g++ -g main.cpp -o fj && \
