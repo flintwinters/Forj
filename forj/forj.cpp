@@ -225,6 +225,7 @@ public:
 
     bool in(string match, char n);
     bool cleanwhitespace();
+    void comment();
     string capture(string close);
     Maybe<string> final(string s);
     Maybe<string> parse();
@@ -242,6 +243,22 @@ bool Text::cleanwhitespace() {
     return false;
 }
 
+void Text::comment() {
+    pull();
+    while (peek() == "") {pull();}
+    int i = 1;
+    int n = 1;
+    while (i < peek(0).length()) {
+        if (peek(0)[i] == '(') {n++;}
+        else if (peek(0)[i] == ')') {
+            n--;
+            if (!n) {break;}
+        }
+        i++;
+    }
+    if (n) {comment();}
+    else {split(i, 1);}
+}
 string Text::capture(string close) {
     pull();
     while (peek() == "") {pull();}
@@ -328,6 +345,6 @@ Maybe<string> Text::parse() {
         W->push(new Node("", tstring))->val = (word) new string(str);
         return str;
     }
-    else if (t == '(') {return capture(")");}
+    else if (t == '(') {comment();}
     return pull();
 }
