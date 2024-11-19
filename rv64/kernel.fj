@@ -21,46 +21,34 @@
 (typecheck.  1 literal #? == true)
 :"#?" array! pull!
 #?:[
-    1 swap!!
+    1 push!!
     "#" get!!
     1 swap!! pull!!
     is!!
+] pull!
+
+:"stkref" array! pull!
+stkref:[
+    length!!! length!! 1 -!! -!!! push!!!
+] pull!
+
+:"stkabs" array! pull!
+stkabs:[
+    length!! 1 swap!! -!! 2 -!!
 ] pull!
 
 literal :"link" assign!
 
 literal 1 replicate! ! :"llnode" assign!
 llnode:[
-    :"this" link! pull!
     :"#=" array! pull!
     :"value" literal! pull!
-    :"next" link! pull!
-    :"n" array! pull!
+    :"this" array! pull!
+    :"n" link! pull!
     :"append" array! pull!
-    #=:[
-        0 push!! this <-!!
-    ] pull!
-    n:[next ->!!] pull!
-    append:[
-        n breakpoint!! [
-            n "next" get!!
-            2 push!! <-!!
-            pull!!
-        ] ?!!
-        n not!! [
-            n 1 push!! <-!!
-        ] ?!!
-    ] pull!
+    append:[1 push!! <-!!] pull!
 ] pull!
-debug!
-llnode:#
-:"node" llnode! node:# breakpoint!
-:"node2" llnode! breakpoint! node:append !
-node:#
-node:#:n
-node:n
-node:#:n!
-debug!
+
 :"mod" array! pull!
 mod:[
     :"b" literal! 1 swap!! =!! pull!!

@@ -394,7 +394,6 @@ uservalue3:
 # 38-30  29-21   20-12  11-0
 # VPN[2] VPN[1] VPN[0] page-offset
 # 9      9      9      12
-# 0x80000000
 # 55-30   29-21  20-12  11-0
 # PPN[2] PPN[1] PPN[0] page-offset
 # 26     9      9      12

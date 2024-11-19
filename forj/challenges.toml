@@ -680,3 +680,26 @@ challenge = """
 """
 result = "1 0"
 
+[stkref]
+challenge = """
+  :"stkref" array! pull!
+  stkref:[
+      length!!! length!! 1 -!! -!!! push!!!
+  ] pull!
+  3 2 [stkref!] :"ok" literal! assign!
+  1 2 23 4 5 ok!
+  10912 59091 0 10 ok!
+"""
+result = "3 2 1 2 23 4 5 3 10912 59091 0 10 3"
+
+[stkabs]
+challenge = """
+  :"stkabs" array! pull!
+  stkabs:[
+      length!! 1 swap!! -!! 2 -!!
+  ] pull!
+  3 2 0 :"ok" literal! assign!
+  1 2 23 4 5 ok stkabs! push!
+  10912 59091 0 10 ok stkabs! push!
+"""
+result = "3 2 1 2 23 4 5 3 10912 59091 0 10 3"

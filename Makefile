@@ -10,7 +10,7 @@ all: kernel
 		-cpu rv64 \
 		-nographic \
 		-serial mon:stdio \
-		-bios opensbi \
+		-bios none \
 		-kernel forjos \
 		-drive format=raw,file=floppy.img,if=virtio &\
 	gdb-multiarch -l 2 -q forjos -x `pwd`/pyg.py -ex "py connect('$(CHALLENGE)')" \

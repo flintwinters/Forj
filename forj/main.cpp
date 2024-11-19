@@ -141,6 +141,11 @@ int fjin(Wrap* W) {
     if (!W->push(f)->exec(W)) {return 0;}
     return 1;
 }
+int fjme(Wrap* W) {
+    W->pull(2);
+    W->push(W->t);
+    return 1;
+}
 int fjis(Wrap* W) {
     W->pull(2);
     word b = (W->pull() == W->pull());
@@ -522,6 +527,7 @@ int main(int argc, char** argv) {
     W->t->addvar("declare",     texec)->f = declare;
     W->t->addvar("assign",      texec)->f = assign;
     W->t->addvar("in",          texec)->f = fjin;
+    W->t->addvar("me",          texec)->f = fjme;
     W->t->addvar("is",          texec)->f = fjis;
     W->t->addvar("has",         texec)->f = fjhas;
     W->t->addvar("length",      texec)->f = fjlength;
