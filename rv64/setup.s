@@ -20,18 +20,24 @@ _start:
 # SD WPRI MBE SBE SXL   UXL   WPRI TSR TW TVM MXR SUM MPRV  XS   FS    MPP   VS   SPP MPIE UBE SPIE WPRI MIE WPRI SIE WPRI
 # 1   25   1   1   2    2      9    1  1   1   1   1   1    2    2     2     2     1   1   1    1    1    1    1   1    1
 	la sp, mstack
-	
-	# enable global interrupts for m and s modes
-	# set previous privilege level to s
-    li      t0, 0x0880
-    csrs    mstatus, t0
 
 	# start mtimecmp at 40k
     li      t0, 50000
     li      t1, 0x2004000
     sd      t0, 0(t1)
 
-# Allocating 1 kernel page
+	la 	 a0, enterkernel
+	la	 t6, pagestart
+	li	 t5, 0x1000
+mapbottompages:
+	call identmap
+	add  a0, a0, t5
+	ble	 a0, t6, mapbottompages
+
+	la	 a0, pageend
+	call identmap
+	call virtualtophysical
+
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
 	li t0, 0x10080f0f
 	csrw pmpcfg0,t0
@@ -44,12 +50,6 @@ _start:
 	csrw 	pmpaddr2, t0
 	li 		t0, 0xffffffff
 	csrw 	pmpaddr2, t0
-
-	la a0, enterkernel
-	call virtualtophysical
-
-	# la a0, pagestart
-	# physicaltovirtual
 
 	sfence.vma x0, x0
 
@@ -78,6 +78,10 @@ _start:
 	or 		t0, t0, t1
 	csrw 	satp, t0
 
+	# enable global interrupts for m and s modes
+	# set previous privilege level to s
+    li      t0, 0x0880
+    csrs    mstatus, t0
 	# enable m interrupts
     li      t0, 0xa0 
     csrs    mie, t0
@@ -131,31 +135,47 @@ v2ploop:
 	add		t0, t0, a0
 	mv		a0, t0
 	ret
-
-# physicaltovirtual:
-# # a0 = virtual  address
-# # a1 = physical address
-# 	la		t0, pagestart
 	
-# 	li		t2, 0xf
-# 	li 		t3, 30
-# 	li 		t4, 21
+# a0 = physical address
+identmap:
+	la 		t0, pagestart
 
-# p2vloop:
-# 	srl		t1, a0, t3
-# 	addi	t3, t3, -9
+	li		t2, 0x1000
+	li 		t3, 30
+	li		t4, 3
 
-# 	andi	t1, t1, 0x1ff
-# 	slli	t1, t1, 3
+identloop:	
+	srl		t1, a0, t3
+	addi	t3, t3, -9
+	andi	t1, t1, 0x1ff
+	slli	t1, t1, 3
+	add 	t0, t0, t1
+	# get the ith offset bits of a0 into t1	
+
+	ble		t3, t4, identbreak
 	
-# 	add		t0, t0, t1
-# 	lw		t1, 0(t0) # get the PTE
+	mv 		t1, t0
+	add		t1, t1, t2
 
-# 	srli	a0, t1, 10
-# 	slli	a0, a0, 12
+	srli	t1, t1, 10
+	slli	t1, t1, 8
+	
+	ori		t1, t1, 1
+	sd 		t1, 0(t0)
+	andi 	t1, t1, -2
+	srli	t0, t1, 10
+	slli	t0, t0, 12
 
-# 	bne		t3, t4, p2vloop
-# 	ret
+	j identloop
+
+identbreak:
+	mv		t1, a0
+	srli	t1, t1, 12
+	slli	t1, t1, 10
+	ori		t1, t1, 0xf
+	sd 		t1, 0(t0)
+
+	ret
 
 # 4. Otherwise, the PTE is valid. If pte.r=1 or pte.x=1, go to step 5. Otherwise, this PTE is a pointer to the
 # next level of the page table. Let i=i-1. If i<0, stop and raise a page-fault exception corresponding to
@@ -357,6 +377,7 @@ userthread3:
 	ld t0, 0(t1)
 	addi t0, t0, 1
 	sd t0, 0(t1)
+	j pageend
 	j userthread3
 
 uservalue1:
@@ -380,23 +401,25 @@ uservalue3:
 # 63 62-61 60-54   53-28  27-19 18-10   9-8  7  6  5  4  3  2  1  0
 # N PBMT Reserved PPN[2] PPN[1] PPN[0] RSW  D  A  G  U  X  W  R  V
 # 1  2 		7 		26 		9 		9   2   1  1  1  1  1  1  1  1
+#
+# PT walking algo starts with i=2 (high end)
 
 .align 12
 pagestart:
-.skip 16, 0
-.quad 0x20001001
-.quad 0x20001001
+.quad 0
+.align 12
+.quad 0
+.align 12
+.quad 0
 .align 12
 
-.quad 0x20001401
-.quad 0x20001401
-.align 12
-
-.skip 16, 0
-.quad 0x2000080f
-.quad 0x2000080f
-.align 12
 pageend:
+	la t1, uservalue3
+	ld t0, 0(t1)
+
+	addi t0, t0, 0x10
+	sd t0, 0(t1)
+	j pageend
 
 .size	_start, .-_start
 .ident	"GCC: (gc891d8dc3e) 13.2.0"
