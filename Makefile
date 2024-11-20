@@ -12,8 +12,12 @@ all: kernel
 		-serial mon:stdio \
 		-bios none \
 		-kernel forjos \
-		-drive format=raw,file=floppy.img,if=virtio &\
-	gdb-multiarch -l 2 -q forjos -x `pwd`/pyg.py -ex "py connect('$(CHALLENGE)')" \
+		-drive format=raw,file=floppy.img,if=none,id=hd0 \
+		-device virtio-blk-device,drive=hd0 &\
+		gdb-multiarch \
+			-l 2 -q forjos \
+			-x `pwd`/pyg.py \
+			-ex "py connect('$(CHALLENGE)')" \
 	)
 	pkill -f qemu-system-riscv64
 
@@ -58,15 +62,9 @@ rv:
 		-serial mon:stdio \
 		-bios none \
 		-kernel forjos \
+		-drive format=raw,file=floppy.img,if=none,id=hd0 \
+		-device virtio-blk-device,drive=hd0 \
 	)
-
-# https://askubuntu.com/questions/484308/create-floppy-images
-# creates a fake FAT drive with 1440 blocks and mounts it
-floppy:
-	@cd rv64 && \
-	mkfs.msdos -F 32 -C ./floppy.img/ 1440 && \
-	mkdir drive && \
-	sudo mount -o loop floppy.img disk
 
 fjrun:
 	cd forj && \
