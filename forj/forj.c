@@ -41,15 +41,9 @@ struct Memtrack* yankmem(struct Memtrack* m) {
     if (m->n) {m->n->p = m->p;}
     return m;
 }
-void freenode(Node* f) {if (f->vty == vallocated) {free(f->v.charp);}}
-void freechildren(Node* f) {
-    Node* m, *n = f->b;
-    while (n) {
-        m = n;
-        n = n->n;
-        freechildren(m);
-    }
-    freenode(f);
+void freenode(Node* f) {
+    if (f->vty == vallocated) {free(f->v.charp);}
+
 }
 void freeall() {
     struct Memtrack* m = M;
@@ -65,7 +59,7 @@ void freeall() {
 
 Node* tunit;
 Node* ttype;
-Node* tnum;
+Node* tliteral;
 Node* texec;
 Node* tarray;
 Node* tstring;
@@ -84,6 +78,18 @@ Node* copynode(Node* n) {
     Node* m = newnode();
     *m = *n;
     return m;
+}
+Node* pushbot(Node* s, Node* n) {
+    if (!s) {return 0;}
+    s->sp++;
+    if (n) {
+        n->p = 0;
+        n->n = s->b;
+    }
+    else {n = tunit;}
+    if (s->b) {s->b->p = n;}
+    else {s->t = n;}
+    return s->b = n;
 }
 Node* push(Node* s, Node* n) {
     if (!s) {return 0;}
@@ -233,9 +239,11 @@ char* node2charp(Node* s) {
     int i = 0;
     while (n) {
         if (n->vty == vcharp) {
-            for (j = 0; n->v.charp[j]; j++) {
-                c[i] = n->v.charp[j];
-                i++;
+            if (n->v.charp) {
+                for (j = 0; n->v.charp[j]; j++) {
+                    c[i] = n->v.charp[j];
+                    i++;
+                }   
             }
         }
         else if (n->vty == vword) {
@@ -251,6 +259,8 @@ Node* makecharp(char* s) {
     Node* m = initnode(tstring, 0);
     Node* n = initnode(tstring, 0);
     push(m, n);
+    m->v.charp = 0;
+    m->vty = vcharp;
     int l = -1;
     while (s[l+1]) {l++;}
     n->v.charp = s;
@@ -265,12 +275,34 @@ Node* strcompress(Node* s) {
     while (n) {
         m = n;
         n = n->n;
-        freechildren(m);
     }
     return c;
 }
-Node* nodetostr(Node* s, int depth) {
-    if (!s->d) {return makecharp("|");}
+#define RESET  "\e[0m"
+#define GRAY   "\e[90m"
+#define RED    "\e[31m"
+#define GREEN  "\e[32m"
+#define YELLOW "\e[33m"
+#define BLUE   "\e[34m"
+#define PURPLE "\e[35m"
+#define CYAN   "\e[36m"
+
+Node* inttostr(Node* n) {
+    int v = n->v.v;
+    if (!v) {return makecharp("0");}
+    Node* l, *m = initnode(tstring, 0);
+    char c;
+    while (v) {
+        l = pushbot(m, initnode(tliteral, 0));
+        l->v.v = '0' + (v%0x10 > 9)*('a'-'0'-10) + v%0x10;
+        l->vty = vword;
+        v /= 0x10;
+    }
+    pushbot(m, makecharp("0x")->b);
+    return strcompress(m);
+}
+Node* prettynode(Node* s, int depth) {
+    if (!s->d) {return makecharp(GRAY"|"RESET);}
     if (!getdata(s, Name)) {return makecharp("no name");}
     Node* ty = getdata(s, Type)->v.n;
     if (!ty) {return makecharp("unit");}
@@ -282,34 +314,48 @@ Node* nodetostr(Node* s, int depth) {
         }
     }
     if (ty == tstring) {
-        append(str, makecharp("\""));
+        append(str, makecharp(CYAN"\""));
         append(str, s);
-        append(str, makecharp("\" "));
+        append(str, makecharp("\" "RESET));
         return strcompress(str);
     }
-    append(str, makecharp("("));
+    if (ty == tliteral) {
+        append(str, makecharp(PURPLE));
+        append(str, inttostr(s));
+        append(str, makecharp(RESET));
+        return strcompress(str);
+    }
+    append(str, makecharp(BLUE"("RESET));
     append(str, getdata(s, Name));
     if (!depth) {
-        append(str, makecharp(" <: "));
-        append(str, nodetostr(ty, 0));
+        append(str, makecharp(GREEN" <: "RESET));
+        append(str, prettynode(ty, 0));
     }
-    append(str, makecharp(")"));
+    append(str, makecharp(BLUE")"RESET));
     if (ty == tarray) {
-        append(str, makecharp("{"));
+        append(str, makecharp(YELLOW"{"RESET));
         Node* d = s->d->b->n->n;
         while (d) {
-            append(str, nodetostr(d, depth+1));
+            append(str, prettynode(d, depth+1));
             d = d->n;
         }
         if (!depth) {append(str, makecharp("\n"));}
-        append(str, makecharp("}"));
-        append(str, makecharp("["));
+        append(str, makecharp(YELLOW"}"RESET));
+        append(str, makecharp(RED"["RESET));
         d = s->b;
         while (d) {
-            append(str, nodetostr(d, depth+1));
+            append(str, prettynode(d, depth+1));
             d = d->n;
         }
-        append(str, makecharp("]"));
+        if (s->b) {
+            append(str, makecharp("\n"));
+            if (depth) {
+                for (int i = 0; i < depth; i++) {
+                    append(str, makecharp("\t"));
+                }
+            }
+        }
+        append(str, makecharp(RED"]"RESET));
     }
     return strcompress(str);
 }
@@ -319,10 +365,9 @@ void printname(Node* n) {
 }
 void printnode(Node* n) {
     struct Memtrack* m = M;
-    n = nodetostr(n, 0);
+    n = prettynode(n, 0);
     char* c = node2charp(n);
     printf("%s\n", c);
-    freechildren(n);
 }
 Node* getvar(Node* s, Node* str) {
     Node* a = frombot(s->d, 2);
@@ -334,29 +379,40 @@ Node* getvar(Node* s, Node* str) {
 }
 
 int main() {
+    FILE* FP = fopen("challenge", "r");
+    fseek(FP, 0, SEEK_END);
+    int size = ftell(FP);
+    char ftxt[size+1];
+    rewind(FP);
+    char* ftxtp = ftxt;
+    while (!feof(FP)) {*ftxtp++ = fgetc(FP);}
+    *ftxtp = 0;
+    fclose(FP);
+
     tunit        = initnode(0      , makecharp("nothing"));
     ttype        = initnode(tunit  , makecharp("type"));
-    tnum         = initnode(tnum   , makecharp("num"));
+    tliteral         = initnode(tliteral   , makecharp("num"));
     texec        = initnode(texec  , makecharp("exec"));
     tarray       = initnode(ttype  , makecharp("array"));
     tstring      = initnode(tarray , makecharp("string"));
     Node* global = initnode(tarray , makecharp("global"));
+    Node* prog = push(global, makecharp(ftxt));
 
     Node* str = initnode(tarray, makecharp("ok"));
     printnode(str);
     printnode(str);
 
-    Node* wow = initnode(tarray, makecharp("wow"));
+    Node* wow = initnode(tliteral, makecharp("wow"));
+    wow->v.v = 4;
     printnode(wow);
     
     Node* l = pushcopy(global->d, wow);
     pushcopy(global->d, wow);
     pushcopy(global->d, wow);
+    wow->v.v = 0x12345;
     pushcopy(global->d, wow);
     pushcopy(getvar(global, makecharp("wow")), wow);
     pushcopy(global->d, wow);
-    printf("0==%d\n", l == getvar(global, makecharp("wow1")));
-    printf("1==%d\n", l == getvar(global, makecharp("wow")));
     push(global, newnode());
     push(global, newnode());
     push(global, newnode());
