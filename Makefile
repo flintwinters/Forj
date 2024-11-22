@@ -25,14 +25,20 @@ kernel: fj
 	@cd rv64 && \
 	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
+	riscv64-unknown-elf-gcc \
+		-c alloc.c \
+		-o outalloc.o \
+		-ffreestanding \
+		-static -nostdlib -lgcc && \
 	riscv64-unknown-elf-gcc -T \
 		linker.ld \
+		setup.o \
+		outalloc.o \
 		-o forjos \
 		-ffreestanding \
 		-O0 \
 		-static \
 		-nostdlib \
-		setup.o \
 		-lgcc
 
 challenge: fjchall rvchall
