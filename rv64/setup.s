@@ -11,7 +11,11 @@
 
 .global _start
 _start:
- 
+	li		t0, -1
+	la		t1, 0x10008006
+	sw		t0, 0(t1)
+drivereaction:
+
 # priv-isa-asciidoc_20240411.pdf
 #
 # timer interrupt setup:
@@ -39,7 +43,7 @@ mapbottompages:
 	call virtualtophysical
 
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
-	li t0, 0x10080f0f
+	li t0, 0x17080f0f
 	csrw pmpcfg0,t0
 
 	la 		t0, enterkernel
@@ -49,7 +53,7 @@ mapbottompages:
 	la 		t0, pageend
 	csrw 	pmpaddr2, t0
 	li 		t0, 0xffffffff
-	csrw 	pmpaddr2, t0
+	csrw 	pmpaddr3, t0
 
 	sfence.vma x0, x0
 
@@ -89,6 +93,8 @@ mapbottompages:
 	la      t0, userthread1
   	csrw    mepc, t0
 
+# do we need to swap in pmpcfgs manually
+# for context switch? (yes?)
     mret
 	
 virtualtophysical:
@@ -337,28 +343,36 @@ enterkernel:
 
 # kernel
 main:
-	# Uart getchar:
-# 	li  t0, 0x10000000
-
-# uartloop:
-# 	lb  	t1, 5(t0)
-# 	andi 	t1, t1, 0x1
-# 	beqz 	t1, nouart
-	
-# 	lb 		t1, 0(t0)
-# 	sb 		t1, 0(t0)
-
-# 	j uartloop
-
-# nouart:
-
 	# To create a page load fault:
 	# la t0, pagestart
 	# slli t0, t0, 10
 	# lb t0, 0(t0)
 	j main
 
+# Uart
+getchar:
+	push t0
+	push t1
+	li  t0, 0x10000000
+
+uartloop:
+	lb  	t1, 5(t0)
+	andi 	t1, t1, 0x1
+	beqz 	t1, nouart
+	
+	lb 		t1, 0(t0)
+	sb 		t1, 0(t0)
+
+	j uartloop
+
+nouart:
+	pull t1
+	pull t0
+	ret
+
 userthread1:
+	call addnums
+
 	la t1, uservalue1
 	ld t0, 0(t1)
 	addi t0, t0, 1
