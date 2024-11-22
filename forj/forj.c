@@ -210,17 +210,6 @@ Node* initnode(Node* type, Node* name) {
     pushcopy(n->d, name);
     return n;
 }
-Node* makestr(Node* n) {
-    Node* s = initnode(tstring, tunit);
-    char* c = n->v.charp;
-    while (*c) {
-        n = pushnew(s);
-        n->v.v = *c;
-        n->vty = vword;
-        c++;
-    }
-    return s;
-}
 char* node2charp(Node* s) {
     if (!s->b) {return "";}
     int size = 0;
@@ -254,6 +243,19 @@ char* node2charp(Node* s) {
     }
     c[i] = 0;
     return c;
+}
+Node* makestr(Node* n) {
+    Node* s = initnode(tstring, tunit);
+    s->v.charp = 0;
+    s->vty = vcharp;
+    char* c = (n->v.charp) ? n->v.charp : n->b->v.charp;
+    while (*c) {
+        n = pushnew(s);
+        n->v.v = *c;
+        n->vty = vword;
+        c++;
+    }
+    return s;
 }
 Node* makecharp(char* s) {
     Node* m = initnode(tstring, 0);
@@ -305,7 +307,7 @@ Node* prettynode(Node* s, int depth) {
     if (!s->d) {return makecharp(GRAY"|"RESET);}
     if (!getdata(s, Name)) {return makecharp("no name");}
     Node* ty = getdata(s, Type)->v.n;
-    if (!ty) {return makecharp("unit");}
+    if (!ty) {return makecharp(YELLOW"unit"RESET);}
     Node* str = makecharp("");
     if (depth) {
         append(str, makecharp("\n"));
@@ -319,21 +321,23 @@ Node* prettynode(Node* s, int depth) {
         append(str, makecharp("\" "RESET));
         return strcompress(str);
     }
-    if (ty == tliteral) {
-        append(str, makecharp(PURPLE));
-        append(str, inttostr(s));
-        append(str, makecharp(RESET));
-        return strcompress(str);
-    }
     append(str, makecharp(BLUE"("RESET));
+    if (ty == ttype || ty == tunit) {append(str, makecharp(YELLOW));}
     append(str, getdata(s, Name));
+    if (ty == ttype || ty == tunit) {append(str, makecharp(RESET));}
     if (!depth) {
         append(str, makecharp(GREEN" <: "RESET));
         append(str, prettynode(ty, 0));
     }
     append(str, makecharp(BLUE")"RESET));
+    if (ty == tliteral) {
+        append(str, makecharp(":"PURPLE));
+        append(str, inttostr(s));
+        append(str, makecharp(RESET));
+        return strcompress(str);
+    }
     if (ty == tarray) {
-        append(str, makecharp(YELLOW"{"RESET));
+        append(str, makecharp(":"YELLOW"{"RESET));
         Node* d = s->d->b->n->n;
         while (d) {
             append(str, prettynode(d, depth+1));
@@ -377,6 +381,9 @@ Node* getvar(Node* s, Node* str) {
     }
     return 0;
 }
+Node* parse(Node* str) {
+    return str;
+}
 
 int main() {
     FILE* FP = fopen("challenge", "r");
@@ -391,8 +398,8 @@ int main() {
 
     tunit        = initnode(0      , makecharp("nothing"));
     ttype        = initnode(tunit  , makecharp("type"));
-    tliteral         = initnode(tliteral   , makecharp("num"));
-    texec        = initnode(texec  , makecharp("exec"));
+    tliteral     = initnode(ttype  , makecharp("literal"));
+    texec        = initnode(ttype  , makecharp("exec"));
     tarray       = initnode(ttype  , makecharp("array"));
     tstring      = initnode(tarray , makecharp("string"));
     Node* global = initnode(tarray , makecharp("global"));
@@ -402,7 +409,7 @@ int main() {
     printnode(str);
     printnode(str);
 
-    Node* wow = initnode(tliteral, makecharp("wow"));
+    Node* wow = initnode(tliteral, makestr(makecharp("wow")));
     wow->v.v = 4;
     printnode(wow);
     
