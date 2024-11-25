@@ -22,6 +22,7 @@
 .global _start
 .global getchar
 .global putchar
+
 _start:
 	li		t0, -1
 	la		t1, 0x10008006
@@ -101,14 +102,15 @@ mapbottompages:
 	# enable m interrupts
     li      t0, 0xa0 
     csrs    mie, t0
-	# set supervisor kernel location
+
+	# set supervisor start location
 	la      t0, userthread1
   	csrw    mepc, t0
 
-	la 		a0, _heap_top
 	call 	initheap
-	la		a0, _heap_top
-	call	alloctest
+	call 	mainc
+	# la		a0, _heap_top
+	# call	alloctest
 
 
 # do we need to swap in pmpcfgs manually
