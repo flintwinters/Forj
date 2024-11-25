@@ -1,7 +1,7 @@
 # https://joe-degs.github.io/systems/2022/06/22/remote-debugging-gdb-qemu.html
 # https://mth.st/blog/riscv-qemu/
 # step by step walkthrough on loading riscv qemu
-all: kernel
+all: kerneldebugc
 	@cd rv64 && \
 	( \
 	qemu-system-riscv64 \
@@ -26,14 +26,45 @@ kernel: fj
 	fj kernel.fj && \
 	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
 	riscv64-unknown-elf-gcc \
+		-mcmodel=medany \
+		-T linker.ld \
+		-O0 \
 		-c alloc.c \
-		-o outalloc.o \
+		-o alloc.s \
 		-ffreestanding \
-		-static -nostdlib -lgcc && \
-	riscv64-unknown-elf-gcc -T \
-		linker.ld \
+		-static -nostdlib -lgcc \
+		-S -fverbose-asm && \
+	riscv64-unknown-elf-as alloc.s -g -o alloc.o &&\
+	riscv64-unknown-elf-gcc \
+		-mcmodel=medany \
+		-T linker.ld \
 		setup.o \
-		outalloc.o \
+		alloc.o \
+		-o forjos \
+		-ffreestanding \
+		-O0 \
+		-static \
+		-nostdlib \
+		-lgcc
+
+kerneldebugc: fj 
+	@cd rv64 && \
+	fj kernel.fj && \
+	riscv64-unknown-elf-as setup.s -g -o setup.o &&\
+	riscv64-unknown-elf-gcc \
+		-mcmodel=medany \
+		-T linker.ld \
+		-O0 -g \
+		-c ../forj/fj.c \
+		-o fj.o \
+		-ffreestanding \
+		-static -nostdlib -lgcc \
+		-fverbose-asm && \
+	riscv64-unknown-elf-gcc \
+		-mcmodel=medany \
+		-T linker.ld \
+		setup.o \
+		fj.o \
 		-o forjos \
 		-ffreestanding \
 		-O0 \
