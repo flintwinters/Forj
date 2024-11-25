@@ -9,7 +9,19 @@
 .section .data
 .section .text.init
 
+.macro rvpush reg
+    addi sp, sp, -8
+    sd \reg, 0(sp)
+.endm
+
+.macro rvpull reg
+    ld \reg, 0(sp)
+    addi sp, sp, 8
+.endm
+
 .global _start
+.global getchar
+.global putchar
 _start:
 	li		t0, -1
 	la		t1, 0x10008006
@@ -52,7 +64,7 @@ mapbottompages:
 	csrw 	pmpaddr1, t0
 	la 		t0, pageend
 	csrw 	pmpaddr2, t0
-	li 		t0, 0xffffffff
+	li 		t0, -1
 	csrw 	pmpaddr3, t0
 
 	sfence.vma x0, x0
@@ -92,6 +104,12 @@ mapbottompages:
 	# set supervisor kernel location
 	la      t0, userthread1
   	csrw    mepc, t0
+
+	la 		a0, _heap_top
+	call 	initheap
+	la		a0, _heap_top
+	call	alloctest
+
 
 # do we need to swap in pmpcfgs manually
 # for context switch? (yes?)
@@ -319,13 +337,14 @@ exittimerhandler:
     mret
 
 .align 12
+.align 11
 mstack:
 .quad mstack # the starting sp
-.align 11
 # (threadstore data structure:
 # - one i64 storing pid of last inst
 # - max pid
 # - [threadnum] pointers to pcbs)
+.align 12
 threadstore:
 .quad 0
 .quad 3
@@ -334,9 +353,6 @@ threadstore:
 .quad userthread3
 .align 12
 
-# uart
-# https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
-serial:
 
 enterkernel:
 	j main
@@ -349,8 +365,11 @@ main:
 	# lb t0, 0(t0)
 	j main
 
+
+# https://github.com/safinsingh/ns16550a/blob/master/src/ns16550a.s
+serial:
 # Uart
-getchar:
+echouart:
 	push t0
 	push t1
 	li  t0, 0x10000000
@@ -370,9 +389,30 @@ nouart:
 	pull t0
 	ret
 
-userthread1:
-	call addnums
+# Uart
+getchar:
+	push t0
+	push t1
+	li  t0, 0x10000000
+	lb  	t1, 5(t0)
+	andi 	t1, t1, 0x1
+	beqz 	t1, nouart
+	
+	lb 		a0, 0(t0)
+	pull t1
+	pull t0
+	ret
 
+# Uart
+putchar:
+	push t0
+	li  t0, 0x10000000
+	
+	sb 		a0, 0(t0)
+	pull t0
+	ret
+
+userthread1:
 	la t1, uservalue1
 	ld t0, 0(t1)
 	addi t0, t0, 1
