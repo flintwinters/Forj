@@ -9,16 +9,6 @@
 .section .data
 .section .text.init
 
-.macro rvpush reg
-    addi sp, sp, -8
-    sd \reg, 0(sp)
-.endm
-
-.macro rvpull reg
-    ld \reg, 0(sp)
-    addi sp, sp, 8
-.endm
-
 .global _start
 .global getchar
 .global putchar
