@@ -40,7 +40,8 @@ struct Vect* resize(struct Vect* v, int newmaxlen) {
     return newv;
 }
 struct Node {
-    Node* ty; // metadata
+    Node* t; // type
+    Node* d; // vars
     struct Vect* s; // stack
 };
 Node* newnode() {
@@ -49,7 +50,8 @@ Node* newnode() {
     #else
         Node* n = malloc(sizeof(Node));
     #endif
-    n->ty = 0;
+    n->t = 0;
+    n->d = 0;
     n->s = valloclen(0);
     return n;
 }
@@ -79,9 +81,9 @@ word pulln(Node* n, word len) {
     if (n->s->len-len < 0) {n->s = 0; return 0;}
     return n->s->v[n->s->len -= len];
 }
-word peek(Node* n) {
-    if (n->s->len == 0) {n->s = 0; return 0;}
-    return n->s->v[n->s->len-1];
+word peek(Node* n, int i) {
+    if (n->s->len <= i) {n->s = 0; return 0;}
+    return n->s->v[n->s->len-i-1];
 }
 word dump(Node* n, Node* m) {
     push(n, (word) m);
@@ -131,6 +133,21 @@ int strmatch(Node* A, Node* B) {
     }
     return i;
 }
+void findstr(Node* S) {
+    char* a = (char*) ((Node*) peek(S, 0))->s->v;
+    Node* b = (Node*) peek(S, 1);
+    int j, i;
+    for (i = 0; *a; i++, a++) {
+        for (j = 0; j < b->s->len; j++) {
+            if (*a == ((char*) b->s->v)[j]) {
+                push(S, ((char*) b->s->v)[j]);
+                push(S, i); return;
+            }
+        }
+    }
+    push(S, 0);
+    push(S, 0);
+}
 #ifndef runrv64
 void printarr(Node* n) {
     if (!n) {printf("print 0\n"); return;}
@@ -141,37 +158,30 @@ void printarr(Node* n) {
 }
 #endif
 Node* getmap(Node* map, Node* s) {
-    if (!map->ty->s->len) {return 0;}
-    for (int i = 1; i < map->ty->s->len; i++) {
-        if (strequ((Node*) map->ty->s->v[i], s)) {
-            return (Node*) map->ty->s->v[i+1];
+    if (!map->d->s->len) {return 0;}
+    for (int i = 0; i < map->d->s->len; i++) {
+        if (strequ((Node*) map->d->s->v[i], s)) {
+            return (Node*) map->d->s->v[i+1];
         }
     }
     return 0;
 }
 void addmap(Node* map, Node* key, Node* val) {
-    if (!map->ty) {map->ty = newnode();}
-    if (!map->ty->s->len) {push(map->ty, 0);}
-    push(map->ty, (word) key);
-    push(map->ty, (word) val);
+    if (!map->d) {map->d = newnode();}
+    push(map->d, (word) key);
+    push(map->d, (word) val);
 }
-
 
 void mainc() {
     char* str =
 "[1 2 3 4]"
 "";
     Node* T = newnode();
-    Node* n = newnode();
-    Node* b = newstr(str);
-    addmap(T, b, n);
-    push(T, (word) newstr("[1 2 3 4]"));
-    push(T, (word) newstr("[2 2 3 4]"));
-    push(T, (word) newstr("[2 2 3 4]"));
-    addmap(T, (Node*) pull(T), T);
-    Node* t = getmap(T, (Node*) pull(T));
+    push(T, (word) newstr(str));
+    addmap(T, (Node*) peek(T, 0), T);
+    push(T, (word) newstr("56781234"));
+    findstr(T);
 
     reclaimnode(T);
-    reclaimnode(n);
 }
 int main() {mainc();}
