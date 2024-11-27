@@ -121,10 +121,19 @@ int slen(char* s) {
     while (*s++) {n++;}
     return n;
 }
+void cpymemrev(byte* dest, byte* src, word len) {
+    for (int i = 0; i < len; i++) {
+        dest[i] = src[len-i-1];
+    }
+}
 void pushstr(Node* n, char* s) {
     word len = (slen(s)+1)/sizeof(word)+1;
     resizeif(n, n->s->len+len, n->s->maxlen+len);
-    cpymem((char*) (n->s->v+n->s->len), s, len*sizeof(word));
+    // cpymem((char*) (n->s->v+n->s->len), s, len*sizeof(word));
+    word lens = slen(s);
+    for (int i = 0; i < lens; i++) {
+        ((char*) (n->s->v+n->s->len))[i] = s[lens-i-2];
+    }
     n->s->len += len;
 }
 void concatstr(Node* n, char* s) {
@@ -158,8 +167,22 @@ int strmatch(Node* A, Node* B) {
     return i;
 }
 void strtoint(Node* S) {
-    int n = 0;
+    word n = 0;
     int b = 10;
+    Node* s = peek(S, 0).n;
+    char* str = (char*) s->s->v;
+    word i = slen(str)-1;
+    if (str[i] == '0') {
+        if (str[i-1] == 'x') {b = 0x10; i -= 2;}
+        if (str[i-1] == 'b') {b = 2; i -= 2;}
+    }
+    while (i >= 0) {
+        n *= b;
+        if (str[i] >= 'a' && str[i] <= 'f') {n += str[i]-'a';}
+        else {n += str[i]-'0';}
+        i--;
+    }
+    push(S, (Ntyp) n);
 }
 void inttostr(Node* S, word n) {
     int b = 0x10;
@@ -180,9 +203,9 @@ void puts(char* s) {
     }
 }
 void putsrev(char* s) {
-    int i = slen(s)-1;
+    int i = slen(s);
     while (i) {
-        putchar(s[i]);
+        putchar(s[i-1]);
         i--;
     }
 }
@@ -263,12 +286,14 @@ void mainc() {
     //     }
     // }
     // push(T, (Ntyp) newstr(" \n\t"));
-    push(T, (Ntyp) newstr(":![]()/\"`"));
-    printarr(T);
-    findstr(T);
-    pushi(T, 3);
-    pushi(T, 2);
-    splitstrat(T);
+    // push(T, (Ntyp) newstr(":![]()/\"`"));
+    // printarr(T);
+    // findstr(T);
+    // pushi(T, 3);
+    // pushi(T, 2);
+    // splitstrat(T);
+    push(T, (Ntyp) newstr("0x123456"));
+    strtoint(T);
 
     reclaimnode(T);
 }
