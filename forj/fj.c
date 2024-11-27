@@ -7,11 +7,15 @@
 #endif
 
 typedef struct Node Node;
+typedef void (*func)(Node*);
 typedef long long word;
 typedef char byte;
 typedef byte bool;
 
-struct Vect {word len, maxlen; word v[];};
+typedef union Ntyp Ntyp;
+union Ntyp {struct Node* n; func f; word w; char* s;};
+#define Zero ((Ntyp) (Node*) 0)
+struct Vect {word len, maxlen; Ntyp v[];};
 struct Vect* valloclen(int maxlen) {
     int n = sizeof(struct Vect)+sizeof(word)*maxlen;
     #ifdef runrv64
@@ -44,7 +48,7 @@ struct Node {
     Node* d; // vars
     struct Vect* s; // stack
 };
-Node* newnode() {
+Node* allocnode() {
     #ifdef runrv64
         Node* n = alloc(sizeof(Node));
     #else
@@ -52,7 +56,16 @@ Node* newnode() {
     #endif
     n->t = 0;
     n->d = 0;
+    return n;
+}
+Node* newnode() {
+    Node* n = allocnode();
     n->s = valloclen(0);
+    return n;
+}
+Node* newnodeallocn(int nn) {
+    Node* n = allocnode();
+    n->s = valloclen(nn);
     return n;
 }
 Node* resizeif(Node* n, word need, word newlen) {
@@ -61,32 +74,36 @@ Node* resizeif(Node* n, word need, word newlen) {
     }
     return n;
 }
-word rawpush(Node* n, word w) {
+Ntyp rawpush(Node* n, Ntyp w) {
     return n->s->v[n->s->len++] = w;
 }
-word push(Node* n, word w) {
+Ntyp push(Node* n, Ntyp w) {
     resizeif(n, n->s->len+1, 1+n->s->maxlen*2);
     return rawpush(n, w);
 }
-word pushn(Node* n, byte* bytes, word len) {
+Ntyp pushn(Node* n, byte* bytes, word len) {
     resizeif(n, n->s->len+len, n->s->maxlen+len);
     cpymem((byte*) (n->s->v+n->s->len), bytes, len);
     return n->s->v[(n->s->len += len)-1];
 }
-word pull(Node* n) {
-    if (n->s->len-1 < 0) {n->s = 0; return 0;}
+Ntyp pull(Node* n) {
+    if (n->s->len-1 < 0) {n->s = 0; return Zero;}
     return n->s->v[--n->s->len];
 }
-word pulln(Node* n, word len) {
-    if (n->s->len-len < 0) {n->s = 0; return 0;}
+Ntyp pulln(Node* n, word len) {
+    if (n->s->len-len < 0) {n->s = 0; return Zero;}
     return n->s->v[n->s->len -= len];
 }
-word peek(Node* n, int i) {
-    if (n->s->len <= i) {n->s = 0; return 0;}
+Ntyp peek(Node* n, word i) {
+    if (n->s->len <= i) {n->s = 0; return Zero;}
     return n->s->v[n->s->len-i-1];
 }
-word dump(Node* n, Node* m) {
-    push(n, (word) m);
+Ntyp pushi(Node* n, word i) {
+    resizeif(n, n->s->len+1, 1+n->s->maxlen*2);
+    return push(n, peek(n, i));
+}
+Ntyp dump(Node* n, Node* m) {
+    push(n, (Ntyp) m);
     return pushn(n, (byte*) m->s->v, sizeof(word)*m->s->len);
 }
 void reclaimnode(Node* n) {
@@ -109,6 +126,13 @@ void pushstr(Node* n, char* s) {
     resizeif(n, n->s->len+len, n->s->maxlen+len);
     cpymem((char*) (n->s->v+n->s->len), s, len*sizeof(word));
     n->s->len += len;
+}
+void concatstr(Node* n, char* s) {
+    word nlen = slen((char*) n->s->v);
+    word strlen = slen(s);
+    resizeif(n, (nlen+strlen)/sizeof(word)+1, n->s->maxlen+strlen);
+    cpymem(((char*) n->s->v)+nlen, s, slen(s));
+    n->s->len = (nlen+strlen)/sizeof(word)+1;
 }
 Node* newstr(char* s) {
     Node* new = newnode();
@@ -133,22 +157,46 @@ int strmatch(Node* A, Node* B) {
     }
     return i;
 }
-void findstr(Node* S) {
-    char* a = (char*) ((Node*) peek(S, 0))->s->v;
-    Node* b = (Node*) peek(S, 1);
-    int j, i;
-    for (i = 0; *a; i++, a++) {
-        for (j = 0; j < b->s->len; j++) {
-            if (*a == ((char*) b->s->v)[j]) {
-                push(S, ((char*) b->s->v)[j]);
-                push(S, i); return;
-            }
-        }
-    }
-    push(S, 0);
-    push(S, 0);
+void strtoint(Node* S) {
+    int n = 0;
+    int b = 10;
 }
-#ifndef runrv64
+void inttostr(Node* S, word n) {
+    int b = 0x10;
+    Node* s = push(S, (Ntyp) newstr("")).n;
+    while (n) {
+        char c[2] = {"0123456789abcdef"[n%0x10], '\0'};
+        concatstr(s, c);
+        n /= b;
+    }
+    concatstr(s, "\0");
+}
+#ifdef runrv64
+void puts(char* s) {
+    while (*s) {
+        const char c = *s;
+        putchar(c);
+        s++;
+    }
+}
+void putsrev(char* s) {
+    int i = slen(s)-1;
+    while (i) {
+        putchar(s[i]);
+        i--;
+    }
+}
+void printarr(Node* n) {
+    if (!n) {puts("print 0\n"); return;}
+    for (int i = 0; i < n->s->len; i++) {
+        puts("x");
+        inttostr(n, n->s->v[i].w);
+        putsrev((char*) (pull(n).n->s->v));
+        puts(" ");
+    }
+    puts("|\n");
+}
+#else
 void printarr(Node* n) {
     if (!n) {printf("print 0\n"); return;}
     for (int i = 0; i < n->s->len; i++) {
@@ -160,27 +208,67 @@ void printarr(Node* n) {
 Node* getmap(Node* map, Node* s) {
     if (!map->d->s->len) {return 0;}
     for (int i = 0; i < map->d->s->len; i++) {
-        if (strequ((Node*) map->d->s->v[i], s)) {
-            return (Node*) map->d->s->v[i+1];
+        if (strequ(map->d->s->v[i].n, s)) {
+            return map->d->s->v[i+1].n;
         }
     }
     return 0;
 }
 void addmap(Node* map, Node* key, Node* val) {
     if (!map->d) {map->d = newnode();}
-    push(map->d, (word) key);
-    push(map->d, (word) val);
+    push(map->d, (Ntyp) key);
+    push(map->d, (Ntyp) val);
+}
+int containstr(char* s, char c) {
+    int i = -1;
+    while (*s) {i++; if (*s == c) {break;} s++;}
+    return i;
+}
+void findstr(Node* S) {
+    Node* b = peek(S, 0).n;
+    char* a = (char*) (peek(S, 1).n)->s->v;
+    word j, i;
+    for (i = 0; a[i]; i++) {
+        if (-1 != (j = containstr((char*) b->s->v, a[i]))) {
+            push(S, (Ntyp) i);
+            push(S, (Ntyp) (word) ((char*) b->s->v)[j]);
+            return;
+        }
+    }
+    push(S, Zero);
+    push(S, Zero);
+}
+void execif(Node* T) {
+    func f = pull(T).f;
+    if (pull(T).w) {f(T);}
+}
+void splitstrat(Node* T) {
+    word  i   = peek(T, 0).w;
+    Node* str = peek(T, 1).n;
+    Node* newst = push(T, (Ntyp) newnodeallocn(i)).n;
+    pushn(newst, (byte*) str->s->v, i+1);
 }
 
 void mainc() {
-    char* str =
-"[1 2 3 4]"
-"";
+    puts("abcd");
+    char* str = " [1 2 3 4]";
     Node* T = newnode();
-    push(T, (word) newstr(str));
-    addmap(T, (Node*) peek(T, 0), T);
-    push(T, (word) newstr("56781234"));
+    Node* E = newnode();
+    push(T, (Ntyp) newstr(str));
+    // for (int i = 0; s->s->len; i++) {
+    //     if (-1 != containstr(" \n\t", ((char*) s->s->v)[i])) {
+    //         push(T, (Ntyp) (word) i);
+    //         splitstrat(T);
+    //         break;
+    //     }
+    // }
+    // push(T, (Ntyp) newstr(" \n\t"));
+    push(T, (Ntyp) newstr(":![]()/\"`"));
+    printarr(T);
     findstr(T);
+    pushi(T, 3);
+    pushi(T, 2);
+    splitstrat(T);
 
     reclaimnode(T);
 }
