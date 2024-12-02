@@ -272,8 +272,37 @@ void splitstrat(Node* T) {
     pushn(newst, (byte*) str->s->v, i+1);
 }
 
+int gets(char buf[0x40]) {
+    int i = 0;
+    int c = putchar(getchar());
+    if (c) {
+        buf[i++] = c;
+        while (c != '\r') {
+            while (!(c = putchar(getchar())));
+            buf[i++] = c;
+        }
+        buf[i] = 0;
+        return 1;
+    }
+    return 0;
+}
+void term() {
+    char buf[0x40];
+    puts("Forj -> ");
+    while (1) {
+        if (gets(buf)) {
+            puts("Forj <- ");
+            puts(buf);
+            puts("\nForj -> ");
+        }
+    }
+}
+
+void user() {
+    puts("Welcome to Forj\n");
+    term();
+}
 void mainc() {
-    puts("abcd");
     char* str = " [1 2 3 4]";
     Node* T = newnode();
     Node* E = newnode();
@@ -285,16 +314,17 @@ void mainc() {
     //         break;
     //     }
     // }
-    // push(T, (Ntyp) newstr(" \n\t"));
-    // push(T, (Ntyp) newstr(":![]()/\"`"));
-    // printarr(T);
+    push(T, (Ntyp) newstr(" \n\t"));
+    push(T, (Ntyp) newstr(":![]()/\"`"));
+    printarr(T);
+
     // findstr(T);
     // pushi(T, 3);
     // pushi(T, 2);
     // splitstrat(T);
-    push(T, (Ntyp) newstr("0x123456"));
-    strtoint(T);
 
     reclaimnode(T);
+
+    user();
 }
 int main() {mainc();}
