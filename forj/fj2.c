@@ -5,7 +5,6 @@
 #include "../rv64/alloc.c"
 #else
 #include <stdlib.h>
-#include <stdio.h>
 #include "utils.c"
 #endif
 typedef struct Vect Vect;
@@ -95,7 +94,7 @@ void printv(Vect* v) {
 void* top(Node* n) {
     return n->s->v+n->s->len;
 }
-void pushn(Node* n, Node* m);
+Node* pushn(Node* n, Node* m);
 Node* newnode() {return malloc(sizeof(Node));}
 Node* initnode(Node* t, Node* d, word size) {
     Node* n = newnode();
@@ -119,7 +118,13 @@ Node* frombot(Node* n, int i) {return ((Node**) n->s->v)[i];}
 Node* fromtop(Node* n, int i) {return ((Node**) (n->s->v))[n->s->len/sizeof(Node*)-i-1];}
 void pushc(String* n, char c) {rawpushv(n, &c, sizeof(char));}
 void pushw(Node* n, word w) {rawpushv(n, &w, sizeof(word));}
-void pushn(Node* n, Node* m) {pushw(n, (word) m);}
+Node* pushn(Node* n, Node* m) {pushw(n, (word) m); return fromtop(n, 0);}
+Node* pushi(Node* n, int i) {return pushn(n, fromtop(n, i));}
+Node* pulln(Node* n) {
+    Node* m = fromtop(n, 0);
+    n->s->len -= sizeof(Node*);
+    return m;
+}
 
 int slen(char* s) {
     int n = 0;
@@ -138,11 +143,10 @@ String* newstr(char* c);
 bool strequ(String* A, String* B) {
     char* a = (char*) A->s->v;
     char* b = (char*) B->s->v;
-    while (*a == *b) {
-        a++; b++;
-        if (!*a && !*b) {return 1;}
+    for (int i = 0; i < min(A->s->len, B->s->len); i++) {
+        if (a[i] != b[i]) {return 0;}
     }
-    return 0;
+    return 1;
 }
 Node* getmap(Node* n, String* k) {
     if (!n->d || !n->d->s || !n->d->s->len) {return 0;}
@@ -153,10 +157,11 @@ Node* getmap(Node* n, String* k) {
     }
     return 0;
 }
-void concatcharp(Node* n, char* s) {rawpushv(n, s, slen(s));}
+void concatcharp(Node* n, char* s) {rawpushvrev(n, s, slen(s));}
 String* rawnewstr(char* c) {
     String* s = initnode(0, 0, 1);
-    for (int i = 0; i < slen(c); i++) {pushc(s, c[i]);}
+    // for (int i = 0; i < slen(c); i++) {pushc(s, c[i]);}
+    for (int i = 0; i < slen(c); i++) {pushc(s, c[slen(c)-i-1]);}
     return s;
 }
 Node* getmch(Node* n, char* c) {
@@ -164,6 +169,11 @@ Node* getmch(Node* n, char* c) {
     Node* m = getmap(n, s);
     reclaimnode(s);
     return m;
+}
+Node* newlit(word w) {
+    Node* n = initnode(tliteral, 0, 0);
+    n->w = w;
+    return n;
 }
 Node* addmap(Node* n, String* k, Node* v) {
     if (!n->d) {n->d = initnode(tarray, 0, 1);}
@@ -183,9 +193,7 @@ String* newstr(char* c) {
     return s;
 }
 void printstr(String* s) {
-    for (int i = 0; i < slen(s->s->v); i++) {
-        putchar(s->s->v[i]);
-    }
+    for (int i = 0; i < s->s->len; i++) {putchar(s->s->v[s->s->len-i-1]);}
 }
 void printnode(Node* n) {
     if (!n) {return;}
@@ -289,9 +297,9 @@ void initworld() {
 void strtoint(Node* n) {
     word m = 0;
     int b = 10;
-    Node* s = fromtop(n, 0);
+    String* s = fromtop(n, 0);
     char* str = (char*) s->s->v;
-    word i = slen(str)-1;
+    word i = s->s->len-1;
     if (str[i] == '0') {
         if (str[i-1] == 'x') {b = 0x10; i -= 2;}
         if (str[i-1] == 'b') {b = 2; i -= 2;}
@@ -308,14 +316,53 @@ void strtoint(Node* n) {
 }
 void inttostr(Node* T, word n) {
     int b = 0x10;
-    pushn(T, newstr(""));
-    String* s = fromtop(T, 0);
+    String* s = newstr("");
     while (n) {
         char c[2] = {"0123456789abcdef"[n%0x10], '\0'};
         concatcharp(s, c);
         n /= b;
     }
-    concatcharp(s, "\0");
+    concatcharp(s, "x\0");
+    String* ss = newstr("");
+    rawpushvrev(ss, s->s->v, s->s->len);
+    reclaimnode(s);
+    pushn(T, ss);
+}
+int containstr(char* s, char c) {
+    for (int i = 0; s[i]; i++) {
+        if (s[i] == c) {return i;}
+    }
+    return -1;
+}
+void findstr(Node* T) {
+    Node* b = fromtop(T, 0);
+    String* s = fromtop(T, 1);
+    char* a = (char*) s->s->v;
+    int len = s->s->len;
+    word j, i;
+    for (i = len-1; i >= 0; i--) {
+        if (-1 != (j = containstr((char*) b->s->v, a[i]))) {
+            pushn(T, newlit(len-1-i));
+            pushn(T, newlit(((char*) b->s->v)[j]));
+            return;
+        }
+    }
+    pushn(T, newlit(0));
+    pushn(T, newlit(0));
+}
+void splitstrat(Node* n) {
+    word  i   = pulln(n)->w;
+    Node* str = fromtop(n, 0);
+    String* newst = pushn(n, newstr(""));
+    rawpushv(newst, str->s->v+str->s->len-i, i);
+}
+void parse(Node* n) {
+    String* s = fromtop(T, 0);
+    
+}
+void parsech(Node* n, char* c) {
+    pushn(n, newstr(c));
+    parse(n);
 }
 void mainc() {
     initworld();
@@ -325,18 +372,32 @@ void mainc() {
     Node* n = initnode(0, 0, 1);
     T->name = newstr("T");
     T->t = tarray;
-    printnode(T->d);
+    printnode(T->d); puts("\n");
     pushn(G, T);
     pushn(G, T);
     G->t = tarray;
     pushn(G, newstr("1234"));
     strtoint(G);
-    printnode(G);
+    printnode(G); puts("\n");
     pushn(G, newstr("hello"));
-    printnode(G);
+    printnode(G); puts("\n");
     concatcharp(fromtop(G, 0), "hi");
     inttostr(G, 0x123);
-    printnode(G);
+    printnode(G); puts("\n");
+    G->s->len -= sizeof(Node*);
+    pushn(G, newlit(2));
+    splitstrat(G);
+    printnode(G); puts("\n");
     printnode(getmch(tarray, "printer"));
+
+    char* str = "[1 2 3 4]123";
+    pushn(G, newstr(str));
+    pushn(G, newstr(" \n\t"));
+    findstr(G);
+    printnode(G);
+    pushi(G, 3);
+    pushi(G, 2);
+    splitstrat(G);
+    printnode(G);
 }
 int main() {mainc();}
