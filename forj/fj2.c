@@ -120,11 +120,12 @@ void pushc(String* n, char c) {rawpushv(n, &c, sizeof(char));}
 void pushw(Node* n, word w) {rawpushv(n, &w, sizeof(word));}
 Node* pushn(Node* n, Node* m) {pushw(n, (word) m); return fromtop(n, 0);}
 Node* pushi(Node* n, int i) {return pushn(n, fromtop(n, i));}
-Node* pulln(Node* n) {
-    Node* m = fromtop(n, 0);
-    n->s->len -= sizeof(Node*);
+Node* pullx(Node* n, int x) {
+    Node* m = fromtop(n, x-1);
+    n->s->len -= sizeof(Node*)*x;
     return m;
 }
+Node* pulln(Node* n) {return pullx(n, 1);}
 
 int slen(char* s) {
     int n = 0;
@@ -208,6 +209,10 @@ void printnode(Node* n) {
         puts(" 0 ");
         RESET;
     }
+}
+void printnodeln(Node* n) {
+    printnode(n);
+    putchar('\n');
 }
 void ttypeprinter(Node* n) {
     if (n->t) {RED; putchar('('); RESET;}
@@ -356,9 +361,23 @@ void splitstrat(Node* n) {
     String* newst = pushn(n, newstr(""));
     rawpushv(newst, str->s->v+str->s->len-i, i);
 }
+bool iftop(Node* n) {return fromtop(n, 0)->w;}
+void splitfind(Node* n, char* c) {
+    pushn(n, newstr(c));
+    findstr(n);
+    if (iftop(n)) {
+        pushi(n, 3);
+        pushi(n, 2);
+        splitstrat(n);
+    }
+}
 void parse(Node* n) {
-    String* s = fromtop(T, 0);
-    
+    splitfind(n, " \n\t");
+    splitfind(n, ":![]()/\"`");
+    pushi(n, 2);
+    if (!iftop(n)) {
+        pulln(n);
+    }
 }
 void parsech(Node* n, char* c) {
     pushn(n, newstr(c));
@@ -378,26 +397,21 @@ void mainc() {
     G->t = tarray;
     pushn(G, newstr("1234"));
     strtoint(G);
-    printnode(G); puts("\n");
+    printnodeln(G);
     pushn(G, newstr("hello"));
-    printnode(G); puts("\n");
+    printnodeln(G);
     concatcharp(fromtop(G, 0), "hi");
     inttostr(G, 0x123);
-    printnode(G); puts("\n");
+    printnodeln(G); puts("\n");
     G->s->len -= sizeof(Node*);
     pushn(G, newlit(2));
     splitstrat(G);
-    printnode(G); puts("\n");
+    printnodeln(G);
     printnode(getmch(tarray, "printer"));
 
-    char* str = "[1 2 3 4]123";
+    char* str = "a[1 2 3 4]123";
     pushn(G, newstr(str));
-    pushn(G, newstr(" \n\t"));
-    findstr(G);
-    printnode(G);
-    pushi(G, 3);
-    pushi(G, 2);
-    splitstrat(G);
+    parse(G);
     printnode(G);
 }
 int main() {mainc();}
