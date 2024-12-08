@@ -312,8 +312,21 @@ Node* addfunc(Node* n, char* c, func f) {
     m->w = (word) f;
     return m;
 }
-void texecbang(Node* P) {((func) pulln(top(P))->w)(P);}
+void bang(Node* P, Node* n) {
+    Node* f = searchvch(n, "!", true);
+    if (f) {((func) f->w)(P);}
+    // else {pushn(top(P), n);}
+}
+void texecbang(Node* P) {((func) top(top(P))->w)(P);}
 void tbangbang(Node* P) {top(top(P))->w--;}
+void tarraybang(Node* P) {
+    pushn(P, top(top(P)));
+    Node* arr = top(P);
+    Node** v = (Node**) arr->s->v;
+    for (int i = 0; i < arr->s->len/sizeof(Node*); i++) {
+        bang(P, v[i]);
+    }
+}
 Node* addtype(char* c) {
     String* s = newstr(c);
     Node* t = addnewvar(T, s, ttype, 0, 0);
@@ -353,6 +366,7 @@ void initworld() {
     addfunc(tbang,      "printer",  tbangprinter);
     addfunc(texec, "!", texecbang);
     addfunc(tbang, "!", tbangbang);
+    addfunc(tarray, "!", tarraybang);
 }
 int containstr(char* s, char c) {
     for (int i = 0; s[i];) {
@@ -491,12 +505,7 @@ void parsetok(Node* P, Node* S) {
         if (n) {
             pushn(top(P), initnode(top(P), tbang, 0, 0))->w = n;
         }
-        else {
-            Node* m = top(top(P));
-            Node* f = searchvch(m, "!", true);
-            if (f) {((func) f->w)(P);}
-            else {pushn(top(P), m);}
-        }
+        else {bang(P, top(top(P)));}
     }
     else if (c == '[') {
         if (P->w) {P->w = 0;}
@@ -529,18 +538,17 @@ void parsetok(Node* P, Node* S) {
         pushn(top(P), str);
     }
 }
-void parse(Node* n) {
-    Node* P = initnode(n, tpath, 0, 1);
-    Node* S = initnode(n, tarray, 0, 1);
+void parse(Node* P) {
+    Node* S = initnode(top(P), tarray, 0, 1);
     P->name = newstr("P");
     S->name = newstr("S");
-    pushn(P, n);
-    throw(S, n);
+    throw(S, top(P));
     while (frombot(S, 0)->s->len) {parsetok(P, S);}
 }
 void parsech(Node* n, char* c) {
-    pushn(n, newstr(c));
-    parse(n);
+    Node* P = initnode(n, tpath, 0, 1);
+    pushn(P, newstr(c));
+    parse(P);
 }
 void mainc() {
     initworld();
@@ -568,14 +576,18 @@ void mainc() {
     printnodeln(getvch(tarray, "printer"));
 
     addnewvar(G, newstr("hello?"), texec, 0, 0)->w = (word) printtest;
-    char* str = "       foo:fee 7 hello? ! arr (arr (arr) arr) \"hello\" arr:arr2 arr:arr2:arr3 arr:arr2:arr3:[1 2 3 4]123";
+    char* str = "       foo:fee 7 hello? ! arr (arr (arr) arr)"
+    " \"hello\" arr:arr2 arr:arr2:arr3 arr:arr2:arr3:[1 2 3 4]123"
+    " arr:arr2:arr3:[hello?] !";
     pushn(G, newstr(str));
     addnewvar(G, newstr("arr"), tarray, 0, 1);
     addnewvar(getvch(G, "arr"), newstr("arr2"), tarray, 0, 1);
     addnewvar(getvch(getvch(G, "arr"), "arr2"), newstr("arr3"), tarray, 0, 1);
     addvar(G, newstr("foo"), newstr("bar"));
     addvar(fromtop(G->d, 0), newstr("fee"), newstr("ber"));
-    parse(G);
+    Node* P = initnode(0, tpath, 0, 1);
+    pushn(P, G);
+    parse(P);
     printnodeln(G);
 }
 int main() {mainc();}
