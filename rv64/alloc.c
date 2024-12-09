@@ -1,12 +1,12 @@
-typedef long long word;
+#include "../forj/utils.c"
+
 struct Block {
     // next, prev
     struct Block* n;
-    int size;
+    word size;
 };
 #define FREES ((struct Block*) (0x87fff000)+1)
-extern void getchar();
-extern void putchar(int c);
+
 extern void initheap() {
     struct Block* frees = FREES;
     frees->n = frees-1;
@@ -14,12 +14,14 @@ extern void initheap() {
     frees->size = 0;
     frees->n->n = 0;
 }
-// assuming b->size > a
-int min(int a, int b) {return (a < b) ? a : b;}
-int max(int a, int b) {return (a > b) ? a : b;}
-int roundblock(int a) {
-    int b = sizeof(struct Block);
-    b = a/b*b;
+void setmem(char* bytes, int i, char n) {
+    for (int j = 0; j < i; j++) {
+        bytes[j] = n;
+    }
+}
+word roundblock(word a) {
+    word b = sizeof(struct Block);
+    b = (a/b)*b;
     if (b == a) {return a;}
     return b+sizeof(struct Block);
 }
@@ -29,7 +31,7 @@ struct Block* splitblock(struct Block* b, int a) {
     new->size = b->size-a;
     return new;
 }
-extern void* alloc(int a) {
+extern void* malloc(unsigned long a) {
     struct Block* frees = FREES;
     struct Block* f = frees->n;
     struct Block* prev = frees;
@@ -43,19 +45,18 @@ extern void* alloc(int a) {
         prev->n = splitblock(f, a);
     }
     else {prev->n = f->n;}
-    f->n = 0;
-    return (char*) (f+1)-a;
+    return (void*) roundblock((word) ((char*) (f+1)-a));
 }
-extern void reclaim(void* b_, int a) {
+extern void reclaim(void* b_, word a) {
     struct Block* frees = FREES;
-    struct Block* b = (struct Block*) ((char*) b_+a)-1;
     struct Block* f = frees->n;
     a = roundblock(a);
+    struct Block* b = (struct Block*) ((char*) b_+a)-1;
     if (f >= b) {
         while (f->n >= b) {f = f->n;}
         if (((char*) f)-f->size == ((char*) b)) {
             f->size += a;
-            while (((char*) f)-f->size == (char*) f->n) {
+            while (((char*) f)-f->size <= (char*) f->n) {
                 f->size += f->n->size;
                 f->n = f->n->n;
             }
@@ -65,7 +66,7 @@ extern void reclaim(void* b_, int a) {
         f->n = b;
     }
     else {
-        if (b == frees-1) {b->n = f->n;}
+        if (b == frees-1) {b->n = f;}
         else {b->n = frees->n;}
         frees->n = b;
     }
@@ -74,5 +75,54 @@ extern void reclaim(void* b_, int a) {
         b->size += f->size;
         b->n = f->n;
         f = f->n;
+    }
+}
+
+char printnumchar(int n) {
+    char m = 0xf & n;
+    if (m == 0) {putchar('.');}
+    else if (m < 10) {putchar('0'+m);}
+    else {putchar('a'+m-10);}
+    return m;
+}
+void printblock(struct Block* b) {
+    putchar(' ');
+    for (int j = 15; j >= 0; j--) {
+        printnumchar(((char*) b)[j]>>4);
+        printnumchar(((char*) b)[j]);
+        if (j%4 == 0) {putchar(' ');}
+    }
+    putchar('\n');
+}
+
+void printheap() {
+    struct Block* b = FREES;
+    BLACK;
+    printint((word) (b-1), 8);
+    printblock(b);
+    RESET;
+    struct Block* d = FREES-1;
+    bool free = false;
+    while (b->n) {
+        while (d != b->n) {
+            YELLOW;
+            printint((word) (d), 8);
+            RESET;
+            printblock(d);
+            d--;
+        }
+        BLACK;
+        if (d->n) {
+            for (int i = sizeof(struct Block); i < b->n->size; i += sizeof(struct Block)) {
+                printint((word) (d), 8);
+                printblock(d);
+                d--;
+            }
+        }
+        printint((word) (d), 8);
+        printblock(d);
+        RESET;
+        d--;
+        b = b->n;
     }
 }
