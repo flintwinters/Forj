@@ -146,15 +146,24 @@ Node* T;
 Node* getvch(Node* n, char* c);
 String* newstr(char* c);
 #define tmaketype(name) (getvch(T, #name))
-#define ttype       tmaketype(type)
 #define tliteral    tmaketype(literal)
 #define tlink       tmaketype(link)
 #define tpath       tmaketype(path)
 #define tmap        tmaketype(map)
 #define tarray      tmaketype(array)
+#define tmultitype  tmaketype(multitype)
+#define tsimulacrum tmaketype(simulacrum)
 #define tstring     tmaketype(string)
 #define texec       tmaketype(exec)
 #define tbang       tmaketype(bang)
+bool strequcharp(String* A, char* b) {
+    char* a = (char*) A->s->v;
+    word blen = slen(b);
+    for (int i = 0; i < min(A->s->len, blen); i++) {
+        if (a[i] != b[i]) {return 0;}
+    }
+    return 1;
+}
 bool strequ(String* A, String* B) {
     char* a = (char*) A->s->v;
     char* b = (char*) B->s->v;
@@ -165,6 +174,7 @@ bool strequ(String* A, String* B) {
 }
 Node* getmap(Node* n, String* k, bool search) {
     if (!n || !n->s || !n->s->len) {return 0;}
+    if (strequcharp(k, "#")) {return n->t;}
     Node** m = (Node**) n->s->v;
     Node* l;
     for (int i = 0; i < n->s->len/sizeof(Node*); i += 2) {
@@ -178,6 +188,7 @@ Node* getmap(Node* n, String* k, bool search) {
 }
 Node* searchvar(Node* n, String* k) {
     if (!n) {return 0;}
+    if (strequcharp(k, "#")) {return n->t;}
     Node* m = getmap(n->d, k, true);
     if (m) {return m;}
     m = searchvar(n->t, k);
@@ -211,7 +222,6 @@ Node* addvar(Node* n, String* k, Node* v) {
     pushn(n->d, v);
     return v;
 }
-// Node* initnode(Node* p, Node* t, Node* d, word size) {
 Node* addnewvar(Node* n, String* name, Node* t, Node* d, word size) {
     Node* m = initnode(n, t, d, size);
     m->name = name;
@@ -240,9 +250,7 @@ void printnode(Node* n) {
         RESET;
     }
 }
-void printnodeln(Node* n) {
-    printnode(n);
-    putchar('\n');
+void printnodeln(Node* n) {printnode(n); putchar('\n');
 }
 void ttypeprinter(Node* n) {
     if (n->t) {RED; putchar('('); RESET;}
@@ -255,12 +263,7 @@ void ttypeprinter(Node* n) {
     }
     if (n->d) {printnode(n->d);}
 }
-void tarrayprinter(Node* n) {
-    BLUE;
-    if (n->name) {printstr(n->name);}
-    else {puts("''");}
-    if (!n->s->len) {RESET; return;}
-    BLUE; puts(":["); RESET;
+void printmembers(Node* n) {
     for (int i = 0; i < n->s->len/sizeof(Node*); i++) {
         if (((Node**) n->s->v)[i]) {
             printnode(((Node**) n->s->v)[i]);
@@ -270,7 +273,36 @@ void tarrayprinter(Node* n) {
             putchar(' ');
         }
     }
+}
+void tarrayprinter(Node* n) {
+    BLUE;
+    if (n->name) {printstr(n->name);}
+    else {puts("''");}
+    if (!n->s->len) {RESET; return;}
+    BLUE; puts(":["); RESET;
+    printmembers(n);
     BLUE putchar(']'); RESET;
+}
+void tmultitypeprinter(Node* n) {
+    RED;
+    if (n->name) {printstr(n->name);}
+    else {puts("''");}
+    if (!n->s->len) {RESET; return;}
+    RED; puts(":("); RESET;
+    printmembers(n);
+    RED putchar(')'); RESET;
+}
+void tsimulacrumprinter(Node* n) {
+    YELLOW;
+    if (n->name) {printstr(n->name);}
+    else {puts("''");}
+    YELLOW; puts(":");
+    Node* o = getvch(n, "origin");
+    if (o) {printstr(o->name);}
+    if (!n->s->len) {RESET; return;}
+    puts(":["); RESET;
+    printmembers(n);
+    YELLOW putchar(']'); RESET;
 }
 void tmapprinter(Node* n) {
     GREEN;
@@ -313,53 +345,63 @@ Node* addfunc(Node* n, char* c, func f) {
     return m;
 }
 void bang(Node* P, Node* n) {
-    Node* f = searchvch(n, "!", true);
-    if (f) {((func) f->w)(P);}
-    // else {pushn(top(P), n);}
+    Node* f = getvch(n, "!");
+    if (f || (f = getvch(n, "!"))) {
+        ((func) f->w)(P);
+        return;
+    }
+    
 }
-void texecbang(Node* P) {((func) top(top(P))->w)(P);}
-void tbangbang(Node* P) {top(top(P))->w--;}
+void texecbang(Node* P) {
+    ((func) pulln(top(P))->w)(P);
+}
+void tbangbang(Node* P) {
+    top(top(P))->w--;
+    if (!pulln(top(P))->w) {
+        bang(P, top(top(P)));
+    }
+}
 void tarraybang(Node* P) {
-    pushn(P, top(top(P)));
-    Node* arr = top(P);
-    Node** v = (Node**) arr->s->v;
+    Node* arr = pulln(top(P));
     for (int i = 0; i < arr->s->len/sizeof(Node*); i++) {
-        bang(P, v[i]);
+        bang(P, ((Node**) arr->s->v)[i]);
     }
 }
 Node* addtype(char* c) {
     String* s = newstr(c);
-    Node* t = addnewvar(T, s, ttype, 0, 0);
+    Node* t = addnewvar(T, s, T, 0, 0);
     t->p = 0;
     t->name = s;
     return t;
 }
 void initworld() {
     T = initnode(0, 0, 0, 1);
+    T->name = newstr("T");
     T->d = initnode(0, 0, 0, 1);
-    Node* str = rawnewstr("type");
-    Node* t = addnewvar(T, str, 0, 0, 0);
-    t->p = 0;
-    t->name = str;
-    str = rawnewstr("string");
-    Node* n = addnewvar(T, str, ttype, 0, 0);
+    T->p = 0;
+    T->name = rawnewstr("type");
+    Node* str = rawnewstr("string");
+    Node* n = addnewvar(T, str, T, 0, 0);
     n->p = 0;
     n->name = str;
-    n->t = t;
+    n->t = T;
     ((Node**) T->d->s->v)[0]->t = tstring;
-    ((Node**) T->d->s->v)[2]->t = tstring;
     T->d->t = addtype("map");
-    addtype("array");
     addtype("exec");
     addtype("literal");
+    addtype("array");
     addtype("link");
     addtype("path");
     addtype("bang");
+    addtype("multitype");
+    addtype("simulacrum");
 
-    addfunc(ttype,      "printer", 0);
+    addfunc(T,   "printer",  0);
     addfunc(tliteral,   "printer",  tliteralprinter);
     addfunc(tarray,     "printer",  tarrayprinter);
     addfunc(tpath,      "printer",  tarrayprinter);
+    addfunc(tmultitype, "printer",  tmultitypeprinter);
+    addfunc(tsimulacrum,"printer",  tsimulacrumprinter);
     addfunc(tmap,       "printer",  tmapprinter);
     addfunc(tstring,    "printer",  tstringprinter);
     addfunc(texec,      "printer",  texecprinter);
@@ -401,7 +443,7 @@ void strtoint(Node* n) {
 void printtest(Node* a) {
     puts("HELLO DOWN THERE!\n");
 }
-void inttostr(Node* T, word n) {
+void inttostr(Node* p, word n) {
     int b = 0x10;
     String* s = newstr("");
     while (n) {
@@ -413,7 +455,7 @@ void inttostr(Node* T, word n) {
     String* ss = newstr("");
     rawpushvrev(ss, s->s->v, s->s->len);
     reclaimnode(s);
-    pushn(T, ss);
+    pushn(p, ss);
 }
 void findoneof(Node* n) {
     Node* b = pulln(n);
@@ -540,7 +582,6 @@ void parsetok(Node* P, Node* S) {
 }
 void parse(Node* P) {
     Node* S = initnode(top(P), tarray, 0, 1);
-    P->name = newstr("P");
     S->name = newstr("S");
     throw(S, top(P));
     while (frombot(S, 0)->s->len) {parsetok(P, S);}
@@ -553,30 +594,19 @@ void parsech(Node* n, char* c) {
 void mainc() {
     initworld();
 
-    Node* G = initnode(0, 0, 0, 0x100);
+    Node* G = initnode(0, tarray, 0, 0x100);
     G->name = newstr("G");
-    T->name = newstr("T");
-    T->t = tarray;
-    printnode(T->d); puts("\n");
-    pushn(G, T);
-    pushn(G, T);
-    G->t = tarray;
-    pushn(G, newstr("1234"));
-    strtoint(G);
-    printnodeln(G);
-    pushn(G, newstr("hello"));
-    printnodeln(G);
-    concatcharp(top(G), "hi");
-    inttostr(G, 0x123);
-    printnodeln(G);
-    G->s->len -= sizeof(Node*);
-    pushn(G, newlit(2));
-    splitstrat(G, 0);
-    printnodeln(G);
-    printnodeln(getvch(tarray, "printer"));
+
+    Node* particle = pushn(G, initnode(G, tmultitype, 0, 1));
+    particle->name = newstr("particle");
+    pushn(particle, initnode(G, T, 0, 0))->name = newstr("vector");
+    pushn(particle, initnode(G, T, 0, 0))->name = newstr("mass");
+    Node* particulate = pushn(G, initnode(G, tsimulacrum, 0, 1));
+    particulate->name = newstr("particulate");
+    addvar(particulate, newstr("origin"), particle);
 
     addnewvar(G, newstr("hello?"), texec, 0, 0)->w = (word) printtest;
-    char* str = "       foo:fee 7 hello? ! arr (arr (arr) arr)"
+    char* str = "       foo:# foo:fee 7 hello? !! ! arr (arr (arr) arr)"
     " \"hello\" arr:arr2 arr:arr2:arr3 arr:arr2:arr3:[1 2 3 4]123"
     " arr:arr2:arr3:[hello?] !";
     pushn(G, newstr(str));
@@ -586,6 +616,7 @@ void mainc() {
     addvar(G, newstr("foo"), newstr("bar"));
     addvar(fromtop(G->d, 0), newstr("fee"), newstr("ber"));
     Node* P = initnode(0, tpath, 0, 1);
+    P->name = newstr("P");
     pushn(P, G);
     parse(P);
     printnodeln(G);
