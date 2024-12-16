@@ -1,5 +1,6 @@
 #ifndef __linux__
 #define runrv64
+#include <stdio.h>
 #endif
 #ifdef runrv64
 #include "../rv64/alloc.c"
@@ -620,5 +621,24 @@ void mainc() {
     pushn(P, G);
     parse(P);
     printnodeln(G);
+
+    char c;
+    char buff[0x40];
+    int i = 0;
+
+    puts("\n<- ");
+    i = 0;
+    while (1) {
+        while (c != '\r') {
+            while (!(c = getchar()));
+            buff[i++] = putchar(c);
+        }
+        if (c) {
+            puts("\n-> ");
+            puts(buff);
+            puts("\n<- ");
+        }
+        c = getchar();
+    }
 }
 int main() {mainc();}

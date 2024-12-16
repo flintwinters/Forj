@@ -28,13 +28,13 @@ drivereaction:
 # 1   25   1   1   2    2      9    1  1   1   1   1   1    2    2     2     2     1   1   1    1    1    1    1   1    1
 	la sp, mstack
 
-	# start mtimecmp at 40k
-    li      t0, 50000
+	# start mtimecmp
+    li      t0, 0
     li      t1, 0x2004000
     sd      t0, 0(t1)
 
-	la 	 a0, enterkernel
-	la	 t6, pagestart
+	la 	 a0, _memory_start
+	la	 t6, _data_end
 	li	 t5, 0x1000
 mapbottompages:
 	call identmap
@@ -44,6 +44,25 @@ mapbottompages:
 	la	 a0, pageend
 	call identmap
 	call virtualtophysical
+
+	la	 a0, ccode
+	li	 t6, 0x4
+mapccode:
+	call identmap
+	sub  a0, a0, t5
+	addi t6, t6, -1
+	bnez t6, mapccode
+
+	la	 a0, _heap_top
+	li	 t6, 0x10
+mapheap:
+	call identmap
+	sub  a0, a0, t5
+	addi t6, t6, -1
+	bnez t6, mapheap
+
+	la	 a0, _uart_base_addr
+	call identmap
 
 	# Set pmpcfg0 to allow read/write/exec of a physical memory region
 	li t0, 0x17080f0f
@@ -94,17 +113,16 @@ mapbottompages:
     csrs    mie, t0
 
 	# set supervisor start location
-	la      t0, userthread1
-  	csrw    mepc, t0
 
 	call 	initheap
 	call 	mainc
 	# la		a0, _heap_top
 	# call	alloctest
 
-
-# do we need to swap in pmpcfgs manually
-# for context switch? (yes?)
+	# j echouart
+	la		sp, user1stack
+	la      t0, userthread1
+  	csrw    mepc, t0
     mret
 	
 virtualtophysical:
@@ -313,13 +331,25 @@ interrupts:
 	mret
 
 timerhandler:
+	push s9
+	push s10
+	push s11
+	push t6
+	push t5
 	j fjtaskhandler
 exittimerhandler:
-	# add 30k to mtimecmp
-	li      t3, 0x2004000
+	pull t5
+	pull t6
+	pull s11
+	pull s10
+	pull s9
+
+	# add to mtimecmp
+	li      t3, 0x200BFF8
 	ld      t2, 0(t3)
 	li		t4, 150000
 	add 	t2, t2, t4
+	li      t3, 0x2004000
 	sd		t2, 0(t3)
 
 	pull t4
@@ -379,6 +409,7 @@ uartloop:
 nouart:
 	pull t1
 	pull t0
+	li a0, 0
 	ret
 
 # Uart
@@ -404,7 +435,12 @@ putchar:
 	pull t0
 	ret
 
+.align 11
+.align 11
+user1stack:
 userthread1:
+	call mainc
+userthread1loop:
 	la t1, uservalue1
 	ld t0, 0(t1)
 	addi t0, t0, 1
@@ -412,18 +448,9 @@ userthread1:
 	j userthread1
 
 userthread2:
-	la t1, uservalue2
-	ld t0, 0(t1)
-	addi t0, t0, 1
-	sd t0, 0(t1)
 	j userthread2
 
 userthread3:
-	la t1, uservalue3
-	ld t0, 0(t1)
-	addi t0, t0, 1
-	sd t0, 0(t1)
-	j pageend
 	j userthread3
 
 uservalue1:
@@ -457,14 +484,9 @@ pagestart:
 .align 12
 .quad 0
 .align 12
-
 pageend:
-	la t1, uservalue3
-	ld t0, 0(t1)
-
-	addi t0, t0, 0x10
-	sd t0, 0(t1)
-	j pageend
 
 .size	_start, .-_start
 .ident	"GCC: (gc891d8dc3e) 13.2.0"
+.section .ccode
+ccode:

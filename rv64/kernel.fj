@@ -2,17 +2,17 @@
 # generated with fj
 
 .macro push reg
-    addi sp, sp, 8
+    addi sp, sp, -8
     sd \reg, 0(sp)
 .endm
 
 .macro pull reg
     ld \reg, 0(sp)
-    addi sp, sp, -8
+    addi sp, sp, 8
 .endm
 
 .macro peek reg
-    ld \reg, 0(sp)
+    ld \reg, -1(sp)
 .endm
 `
 
@@ -240,6 +240,12 @@ fjtaskhandler:
 
     li   ` eight:r `, 8
 `
+    modres allocreg! =! setstr!
+    i max rvmod! modres assign!
+`
+    mv   ` i:r `, ` modres:r 
+    modres freereg! pull!`
+`
     i rv+! `2
     mul  ` i:r `, ` i:r `, ` eight:r `
     add  ` a2:r `, ` a:r `, ` i:r `
@@ -249,20 +255,11 @@ fjtaskhandler:
 `
     a2 freereg! pull!
     i rv+! `1`
-    modres allocreg! =! setstr!
-`
-    sd  ` i:r `, 0(` a:r `)`
-    i max rvmod! modres assign! 
-`
-`
-    modres rv+! `2`
-    `
-    mul ` i:r `, ` eight:r `, ` modres:r
-    modres freereg! pull!
-`
-`
-    a rv+=! i:r
-    `
+    i max rvmod! i assign! `
+    sd  ` i:r `, 0(` a:r `)
+`   i rv+! `2
+    mul ` i:r `, ` i:r `, ` eight:r `
+`   a rv+=! i:r `
     ld  ` a:r `, 0(` a:r `)
     csrw mepc, ` a:r
 
