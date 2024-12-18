@@ -1,6 +1,5 @@
 #ifndef __linux__
 #define runrv64
-#include <stdio.h>
 #endif
 #ifdef runrv64
 #include "../rv64/alloc.c"
@@ -11,15 +10,20 @@
 typedef struct Vect Vect;
 typedef struct Node Node;
 typedef Node String;
+typedef Node Type;
 typedef void (*func)(Node*);
 typedef long long word;
 
+// Dynamic array
 struct Vect {short len, maxlen; byte v[];};
+// The homoiconic data type
 struct Node {
     word w;
-    Node* p, *name, *d, *t;
+    Node* p, *name, *d;
+    Node* t; // <- array node
     Vect* s;
 };
+// Pre-allocate a dynamic array of `maxlen` bytes
 struct Vect* valloclen(int maxlen) {
     int n = sizeof(struct Vect)+maxlen;
     struct Vect* newv = malloc(n);
@@ -27,16 +31,19 @@ struct Vect* valloclen(int maxlen) {
     newv->len = 0;
     return newv;
 }
+// Copy `len` bytes from `src` to `dest`
 void cpymem(byte* dest, byte* src, word len) {
     for (int i = 0; i < len; i++) {
         dest[i] = src[i];
     }
 }
+// Copy `len` bytes from `src` to `dest`, mirroring the data
 void cpymemrev(byte* dest, byte* src, word len) {
     for (int i = 0; i < len; i++) {
         dest[i] = src[len-i-1];
     }
 }
+// Resize a dynamic array's allocation
 struct Vect* resize(struct Vect* v, int newmaxlen) {
     if (!newmaxlen) {
         newmaxlen = (v->maxlen) ? 2*v->maxlen: 1;
@@ -51,6 +58,8 @@ struct Vect* resize(struct Vect* v, int newmaxlen) {
     #endif
     return newv;
 }
+// Free a node and its associated dynamic array
+// Works on both linux and bare riscv, with alloc.c
 void reclaimnode(Node* n) {
     #ifdef runrv64
         reclaim(n->s, sizeof(struct Vect)+n->s->maxlen);
@@ -60,6 +69,17 @@ void reclaimnode(Node* n) {
         free(n);
     #endif
 }
+// Reclaims only the node, not the array
+void reclaimhead(Node* n) {
+    #ifdef runrv64
+        reclaim(n, sizeof(Node));
+    #else
+        free(n);
+    #endif
+}
+
+// Grow the dynamic array to fit `n->s->len`
+// Grows by powers of two.
 void growtofit(Node* n) {
     word newlen = 1;
     if (!n->s->maxlen) {newlen = n->s->maxlen;}
@@ -68,12 +88,14 @@ void growtofit(Node* n) {
     }
     n->s = resize(n->s, newlen);
 }
+// Resize if the new len is bigger.
 void condresize(Node* n, int addlen) {
     n->s->len += addlen;
     if (n->s->len > n->s->maxlen) {
         growtofit(n);
     }
 }
+// Print the raw data of a dynamic array
 void printv(Vect* v) {
     printint(v->len, 8);
     putchar(' ');
@@ -92,79 +114,120 @@ void printv(Vect* v) {
     putchar('\n');
 }
 
+// Push m onto n's stack
 Node* pushn(Node* n, Node* m);
+// Allocate a new node
 Node* newnode() {return malloc(sizeof(Node));}
-Node* initnode(Node* p, Node* t, Node* d, word size) {
-    Node* n = newnode();
-    n->w = 0;
-    n->p = p;
-    n->name = 0;
-    n->t = t;
-    n->d = d;
-    if (size) {n->s = valloclen(size);}
-    else {n->s = 0;}
-    return n;
-}
+// Push raw `dat` to n's stack
+// `size` is in bytes
 void rawpushv(Node* n, void* dat, word size) {
     condresize(n, size);
     cpymem((char*) n->s->v+n->s->len-size, dat, size);
 }
+// Push raw, mirrored `dat` to n's stack
+// `size` is in bytes
 void rawpushvrev(Node* n, void* dat, word size) {
     condresize(n, size);
     cpymemrev((char*) n->s->v+n->s->len-size, dat, size);
 }
+// Return the ith node from the bottom of n's stack
 Node* frombot(Node* n, int i) {return ((Node**) n->s->v)[i];}
+// Return the ith node from the top of n's stack
 Node* fromtop(Node* n, int i) {return ((Node**) (n->s->v))[n->s->len/sizeof(Node*)-i-1];}
+// Return the top of n's stack
 Node* top(Node* n) {return fromtop(n, 0);}
+// Push one char
 void pushc(String* n, char c) {rawpushv(n, &c, sizeof(char));}
-void pushw(Node* n, word w) {
-    rawpushv(n, &w, sizeof(word));}
+// Push raw word
+void pushw(Node* n, word w)   {rawpushv(n, &w, sizeof(word));}
+// Push m onto n's stack, returns m
 Node* pushn(Node* n, Node* m) {rawpushv(n, &m, sizeof(Node*)); return top(n);}
+// Bubble the ith element from the top, copying it to the top, returning it.
 Node* pushi(Node* n, int i) {return pushn(n, fromtop(n, i));}
-void* pullb(Node* n, int i) {
-    void* p = n->s->v+n->s->len-i;
-    n->s->len -= i;
-    return p;
-}
+// Pull x (Node*)s from n
+// returns the last element that was removed
 Node* pullx(Node* n, int x) {
     Node* m = fromtop(n, x-1);
     n->s->len -= sizeof(Node*)*x;
     return m;
 }
+// Pull one Node* from n and return it.
 Node* pulln(Node* n) {return pullx(n, 1);}
+// Transfer the top element of `src` to `dest`
+// returns the element
 Node* throw(Node* dest, Node* src) {return pushn(dest, pulln(src));}
+// Spill all of `src` onto `dest`
+// returns dest
 Node* explode(Node* dest, Node* src) {
     rawpushv(dest, &src->s->v, src->s->len);
     return dest;
 }
+// Returns true if a contains b, false otherwise.
+bool contains(Node* a, Node* b) {
+    if (!a || !b) {return false;}
+    Node** m = (Node**) a->s->v;
+    for (int i = 0; i < a->s->len/sizeof(Node*); i++) {
+        if (m[i] == b) {return true;} 
+    }
+    return false;
+}
 
+// Returns length of string s
 int slen(char* s) {
     int n = 0;
     while (*s++) {n++;}
     return n;
 }
-Node* T;
-Node* getvch(Node* n, char* c);
-String* newstr(char* c);
-#define tmaketype(name) (getvch(T, #name))
+// The base type.
+// All values inherit from this on some level.
+// This inherits from no type.
+Node* T = 0;
+
+Node* srch(Node* n, char* c);
+#define tmaketype(name) (srch(T, #name))
 #define tliteral    tmaketype(literal)
-#define tlink       tmaketype(link)
 #define tpath       tmaketype(path)
 #define tmap        tmaketype(map)
 #define tarray      tmaketype(array)
-#define tmultitype  tmaketype(multitype)
-#define tsimulacrum tmaketype(simulacrum)
 #define tstring     tmaketype(string)
 #define texec       tmaketype(exec)
 #define tbang       tmaketype(bang)
+String* newstr(char* c);
+Node* addtype(Node* n, Node* t);
+// Create a new node and initialize some of its values.
+// Also pre-allocates `size` on its stack.
+// If `size` is 0, no stack will be allocated.
+Node* initnode(Node* p, Node* t, word size) {
+    Node* n = newnode();
+    n->w = 0;
+    n->p = p;
+    n->name = 0;
+    n->d = 0;
+    if (size) {n->s = valloclen(size);}
+    else {n->s = 0;}
+    n->t = 0;
+    if (t) {addtype(n, t);}
+    return n;
+}
+// Add a type t to n's typelist
+Node* addtype(Node* n, Node* t) {
+    if (!n->t) {
+        n->t = initnode(n, 0, sizeof(Node*));
+        n->t->t = initnode(n->t, 0, sizeof(Node*));
+        pushn(n->t->t, T);
+    }
+    return pushn(n->t, t);
+}
+// Returns true if String* A === char* b
 bool strequcharp(String* A, char* b) {
     char* a = (char*) A->s->v;
     word blen = slen(b);
     for (int i = 0; i < min(A->s->len, blen); i++) {
-        if (a[i] != b[i]) {return 0;}
+        if (a[i] != b[i]) {return false;}
     }
-    return 1;
+    return true;
 }
+// Returns true if String* A === String* b
 bool strequ(String* A, String* B) {
     char* a = (char*) A->s->v;
     char* b = (char*) B->s->v;
@@ -173,98 +236,104 @@ bool strequ(String* A, String* B) {
     }
     return 1;
 }
-Node* getmap(Node* n, String* k, bool search) {
+// Concatenates char* s onto the String node.
+void concatcharp(String* n, char* s) {rawpushvrev(n, s, slen(s));}
+// Create a new String* object, with its type unset.
+String* rawnewstr(char* c) {
+    String* s = initnode(0, 0, 1);
+    for (int i = 0; i < slen(c); i++) {pushc(s, c[slen(c)-i-1]);}
+    return s;
+}
+
+// Gets the variable with name `k` in `n`.
+// n must already be a map.  ie: myNode->d.
+// It's not a real hashmap, merely a list of ordered pairs,
+// (String, Node).  Therefore access is worse at O(n).
+Node* getmap(Node* n, String* k) {
     if (!n || !n->s || !n->s->len) {return 0;}
+    // Hardcode run-time access to a value's type, by doing myNode:#
     if (strequcharp(k, "#")) {return n->t;}
     Node** m = (Node**) n->s->v;
-    Node* l;
     for (int i = 0; i < n->s->len/sizeof(Node*); i += 2) {
         if (!m[i]) {continue;}
-        if (search && m[i]->t == tmap && (l = getmap(m[i], k, true))) {
-            return l;
-        }
         if (strequ(m[i], k)) {return m[i+1];}
     }
     return 0;
 }
+// Recurses getmap over n's containers, and types.
 Node* searchvar(Node* n, String* k) {
     if (!n) {return 0;}
     if (strequcharp(k, "#")) {return n->t;}
-    Node* m = getmap(n->d, k, true);
+    Node* m = getmap(n->d, k);
     if (m) {return m;}
-    m = searchvar(n->t, k);
-    if (m) {return m;}
+    if (n->t) {
+        Node** l = (Node**) n->t->s->v;
+        for (int i = 0; i < n->t->s->len/sizeof(Node*); i++) {
+            if ((m = searchvar(l[i], k))) {return m;} 
+        }
+    }
     return searchvar(n->p, k);
 }
-void concatcharp(Node* n, char* s) {rawpushvrev(n, s, slen(s));}
-String* rawnewstr(char* c) {
-    String* s = initnode(0, 0, 0, 1);
-    // for (int i = 0; i < slen(c); i++) {pushc(s, c[i]);}
-    for (int i = 0; i < slen(c); i++) {pushc(s, c[slen(c)-i-1]);}
-    return s;
-}
-Node* searchvch(Node* n, char* c, bool search) {
+// Applies searchvar but with a char* key
+Node* srch(Node* n, char* c) {
     String* s = rawnewstr(c);
     Node* m;
-    if (search) {m = searchvar(n, s);}
-    else {m = getmap(n->d, s, false);}
+    m = searchvar(n, s);
     reclaimnode(s);
     return m;
 }
-Node* getvch(Node* n, char* c) {return searchvch(n, c, false);}
+// Returns a new literal Node
 Node* newlit(word w) {
-    Node* n = initnode(0, tliteral, 0, 0);
+    Node* n = initnode(0, tliteral, 0);
     n->w = w;
     return n;
 }
+// Adds a variable to a node.  Returns the variable.
 Node* addvar(Node* n, String* k, Node* v) {
-    if (!n->d) {n->d = initnode(n, tmap, 0, 1);}
+    if (!n->d) {n->d = initnode(n, tmap, 1);}
     pushn(n->d, k);
     pushn(n->d, v);
     return v;
 }
-Node* addnewvar(Node* n, String* name, Node* t, Node* d, word size) {
-    Node* m = initnode(n, t, d, size);
+// Initializes a new Node and adds it to n as a variable
+Node* addnewvar(Node* n, String* name, Node* t, word size) {
+    Node* m = initnode(n, t, size);
     m->name = name;
     addvar(n, name, m);
     return m;
 }
+// Creates a new string, this time properly initializing the type.
 String* newstr(char* c) {
     String* s = rawnewstr(c);
-    s->t = tstring;
+    addtype(s, tstring);
     return s;
 }
+// Prints a String*
 void printstr(String* s) {
-    for (int i = 0; i < s->s->len; i++) {putchar(s->s->v[s->s->len-i-1]);}
+    for (int i = 0; i < s->s->len; i++) {
+        putchar(s->s->v[s->s->len-i-1]);
+    }
 }
+void printarraylike(Node* n);
+// Print a node, according to printing functions provided by its types.
 void printnode(Node* n) {
     if (!n) {return;}
     Node* m;
-    if (n->t && (m = getvch(n->t, "printer"))) {
-        if (m->w) {((void (*)(Node*)) m->w)(n);}
-        else if (n->name) {YELLOW; printstr(n->name); RESET;}
+    if (n->t) {
+        if ((m = srch(*(Node**) n->t->s->v, "printer"))) {
+            if (m->w) {((void (*)(Node*)) m->w)(n);}
+            else if (n->name) {YELLOW; printstr(n->name); RESET;}
+        }
+        else {BLACK; puts(" noprinter "); RESET;}
     }
     else if (n->name) {printstr(n->name);}
-    else {
-        BLACK;
-        puts(" 0 ");
-        RESET;
-    }
+    else {YELLOW; puts("#"); RESET; printarraylike(n);}
 }
-void printnodeln(Node* n) {printnode(n); putchar('\n');
-}
-void ttypeprinter(Node* n) {
-    if (n->t) {RED; putchar('('); RESET;}
-    if (n->name) {YELLOW; printstr(n->name); RESET;}
-    else {puts("''");}
-    if (n->t) {
-        BLUE; puts(" <: "); RESET;
-        printnode(n->t);
-        RED; putchar(')'); RESET;
-    }
-    if (n->d) {printnode(n->d);}
-}
-void printmembers(Node* n) {
+void printnodeln(Node* n) {printnode(n); putchar('\n');}
+// Calls printnode on elements in a Node's stack.
+// Used by some other printing methods.
+void printarraylike(Node* n) {
+    if (!n->s) {return;}
     for (int i = 0; i < n->s->len/sizeof(Node*); i++) {
         if (((Node**) n->s->v)[i]) {
             printnode(((Node**) n->s->v)[i]);
@@ -275,35 +344,30 @@ void printmembers(Node* n) {
         }
     }
 }
+void ttypeprinter(Node* n) {
+    if (!n) {return;}
+    if (n->t && n->s) {RED; putchar('('); RESET;}
+    YELLOW;
+    if (n->name) {printstr(n->name);}
+    else {puts("''");}
+    RESET;
+    
+    if (n->t && n->s) {
+        BLUE; puts(" <: "); RESET;
+        RED; putchar('('); RESET;
+        printarraylike(n);
+        RED; putchar(')'); RESET;
+        RED; putchar(')'); RESET;
+    }
+}
 void tarrayprinter(Node* n) {
     BLUE;
     if (n->name) {printstr(n->name);}
     else {puts("''");}
     if (!n->s->len) {RESET; return;}
     BLUE; puts(":["); RESET;
-    printmembers(n);
+    printarraylike(n);
     BLUE putchar(']'); RESET;
-}
-void tmultitypeprinter(Node* n) {
-    RED;
-    if (n->name) {printstr(n->name);}
-    else {puts("''");}
-    if (!n->s->len) {RESET; return;}
-    RED; puts(":("); RESET;
-    printmembers(n);
-    RED putchar(')'); RESET;
-}
-void tsimulacrumprinter(Node* n) {
-    YELLOW;
-    if (n->name) {printstr(n->name);}
-    else {puts("''");}
-    YELLOW; puts(":");
-    Node* o = getvch(n, "origin");
-    if (o) {printstr(o->name);}
-    if (!n->s->len) {RESET; return;}
-    puts(":["); RESET;
-    printmembers(n);
-    YELLOW putchar(']'); RESET;
 }
 void tmapprinter(Node* n) {
     GREEN;
@@ -339,23 +403,23 @@ void tbangprinter(Node* n) {
     }
     RESET;
 }
+// Adds function f as a variable to n
 Node* addfunc(Node* n, char* c, func f) {
     String* s = newstr(c);
-    Node* m = addnewvar(n, s, texec, 0, 0);
+    Node* m = addnewvar(n, s, texec, 0);
     m->w = (word) f;
     return m;
 }
+// The `!` operator
+// P is the execution path, n is the Node being operated on.
 void bang(Node* P, Node* n) {
-    Node* f = getvch(n, "!");
-    if (f || (f = getvch(n, "!"))) {
+    Node* f;
+    if ((f = srch(n, "!"))) {
         ((func) f->w)(P);
-        return;
     }
-    
 }
-void texecbang(Node* P) {
-    ((func) pulln(top(P))->w)(P);
-}
+
+void texecbang(Node* P) {((func) pulln(top(P))->w)(P);}
 void tbangbang(Node* P) {
     top(top(P))->w--;
     if (!pulln(top(P))->w) {
@@ -365,44 +429,43 @@ void tbangbang(Node* P) {
 void tarraybang(Node* P) {
     Node* arr = pulln(top(P));
     for (int i = 0; i < arr->s->len/sizeof(Node*); i++) {
+        pushn(top(P), ((Node**) arr->s->v)[i]);
         bang(P, ((Node**) arr->s->v)[i]);
     }
 }
-Node* addtype(char* c) {
+
+// Declare a new type and add it to T
+Node* maketype(char* c) {
     String* s = newstr(c);
-    Node* t = addnewvar(T, s, T, 0, 0);
+    Node* t = addnewvar(T, s, T, 0);
     t->p = 0;
     t->name = s;
+    pushn(T, t);
     return t;
 }
+// Bootstrap type tree
 void initworld() {
-    T = initnode(0, 0, 0, 1);
+    T = initnode(0, 0, 1);
     T->name = newstr("T");
-    T->d = initnode(0, 0, 0, 1);
+    T->d = initnode(T, 0, 1);
     T->p = 0;
-    T->name = rawnewstr("type");
     Node* str = rawnewstr("string");
-    Node* n = addnewvar(T, str, T, 0, 0);
-    n->p = 0;
-    n->name = str;
-    n->t = T;
-    ((Node**) T->d->s->v)[0]->t = tstring;
-    T->d->t = addtype("map");
-    addtype("exec");
-    addtype("literal");
-    addtype("array");
-    addtype("link");
-    addtype("path");
-    addtype("bang");
-    addtype("multitype");
-    addtype("simulacrum");
+    pushn(T->d, str);
+    pushn(T, pushn(T->d, initnode(0, T, 0)))->name = str;
+    addtype(T->d, maketype("map"));
+    addtype(str, tstring);
+    addtype(T->name, tstring);
+    
+    maketype("exec");
+    maketype("literal");
+    maketype("array");
+    maketype("path");
+    maketype("bang");
 
-    addfunc(T,   "printer",  0);
+    addfunc(T,   "printer",  ttypeprinter);
     addfunc(tliteral,   "printer",  tliteralprinter);
     addfunc(tarray,     "printer",  tarrayprinter);
     addfunc(tpath,      "printer",  tarrayprinter);
-    addfunc(tmultitype, "printer",  tmultitypeprinter);
-    addfunc(tsimulacrum,"printer",  tsimulacrumprinter);
     addfunc(tmap,       "printer",  tmapprinter);
     addfunc(tstring,    "printer",  tstringprinter);
     addfunc(texec,      "printer",  texecprinter);
@@ -436,13 +499,10 @@ void strtoint(Node* n) {
         else {m += str[i]-'0';}
         i--;
     }
-    Node* l = initnode(0, tliteral, 0, 0);
+    Node* l = initnode(0, tliteral, 0);
     if (neg) {m *= -1;}
     l->w = m;
     pushn(n, l);
-}
-void printtest(Node* a) {
-    puts("HELLO DOWN THERE!\n");
 }
 void inttostr(Node* p, word n) {
     int b = 0x10;
@@ -468,18 +528,22 @@ void findoneof(Node* n) {
         if (-1 != (j = containstr((char*) b->s->v, a[i]))) {
             pushn(n, newlit(len-1-i));
             pushn(n, newlit(((char*) b->s->v)[j]));
+            reclaimnode(b);
             return;
         }
     }
     pushn(n, newlit(len));
     pushn(n, newlit(0));
+    reclaimnode(b);
 }
 void splitstrat(Node* n, int consume) {
-    word  i   = pulln(n)->w;
+    Node* f = pulln(n);
+    word  i = f->w;
     String* str = top(n);
     String* newst = pushn(n, newstr(""));
     rawpushv(newst, str->s->v+str->s->len-i, i);
     str->s->len -= i+consume;
+    reclaimhead(f);
 }
 void splitfind(Node* n, char* c, int consume) {
     pushn(n, newstr(c));
@@ -512,7 +576,8 @@ void addtok(Node* P, Node* S) {
     if (isnum(S)) {strtoint(S); throw(top(P), S);}
     else {
         Node* v = searchpath(P, top(S));
-        if (P->w) {pulln(P); P->w = 0;}
+        if (!v) {puts("Not Found: "); printstr(top(S)); putchar('\n');}
+        if (P->w) {pulln(P); P->w = false;}
         pushn(top(P), v);
     }
 }
@@ -522,8 +587,8 @@ void cleanleadingspace(String* s) {
     }
 }
 void parsetok(Node* P, Node* S) {
-    printnodeln(P);
-    printnodeln(S);
+    // printnodeln(P);
+    // printnodeln(S);
     struct Vect* s = top(S)->s;
     while (-1 != containstr(" \n\t", s->v[s->len-1])) {
         s->len--;
@@ -532,8 +597,8 @@ void parsetok(Node* P, Node* S) {
     char c = fromtop(S, 2)->w;
     if (!c) {addtok(P, S); pullx(S, 4); return;}
     if (c == ':') {
-        if (P->w) {setsearch(P, getmap(top(P)->d, top(S), true));}
-        else {P->w = 1; pushn(P, searchpath(P, top(S)));}
+        if (P->w) {setsearch(P, getmap(top(P)->d, top(S)));}
+        else {P->w = true; pushn(P, searchpath(P, top(S)));}
         pullx(S, 4);
         return;
     }
@@ -546,13 +611,13 @@ void parsetok(Node* P, Node* S) {
         while (s->s->v[s->s->len-n-1] == '!') {n++;}
         s->s->len -= n;
         if (n) {
-            pushn(top(P), initnode(top(P), tbang, 0, 0))->w = n;
+            pushn(top(P), initnode(top(P), tbang, 0))->w = n;
         }
         else {bang(P, top(top(P)));}
     }
     else if (c == '[') {
-        if (P->w) {P->w = 0;}
-        else {pushn(P, initnode(top(P), tarray, 0, 1));}
+        if (P->w) {P->w = false;}
+        else {pushn(P, initnode(top(P), tarray, 1));}
     }
     else if (c == ']') {Node* n = pulln(P); pushn(top(P), n);}
     else if (c == '(') {
@@ -566,7 +631,7 @@ void parsetok(Node* P, Node* S) {
     }
     else if (c == '"' || c == '`') {
         s = top(S)->s;
-        String* str = initnode(top(P), tstring, 0, 1);
+        String* str = initnode(top(P), tstring, 1);
         while (s->v[s->len-1] != c) {
             if (s->v[s->len-1] == '\\') {s->len--;}
             pushc(str, s->v[s->len-1]);
@@ -582,63 +647,75 @@ void parsetok(Node* P, Node* S) {
     }
 }
 void parse(Node* P) {
-    Node* S = initnode(top(P), tarray, 0, 1);
+    Node* S = initnode(top(P), tarray, 1);
     S->name = newstr("S");
     throw(S, top(P));
     while (frombot(S, 0)->s->len) {parsetok(P, S);}
 }
 void parsech(Node* n, char* c) {
-    Node* P = initnode(n, tpath, 0, 1);
+    Node* P = initnode(n, tpath, 1);
     pushn(P, newstr(c));
     parse(P);
 }
-void mainc() {
+
+void printtest(Node* a) {
+    puts("HELLO DOWN THERE!\n");
+}
+void mainc(char* str) {
     initworld();
 
-    Node* G = initnode(0, tarray, 0, 0x100);
+    Node* G = initnode(0, tarray, 0x100);
     G->name = newstr("G");
 
-    Node* particle = pushn(G, initnode(G, tmultitype, 0, 1));
-    particle->name = newstr("particle");
-    pushn(particle, initnode(G, T, 0, 0))->name = newstr("vector");
-    pushn(particle, initnode(G, T, 0, 0))->name = newstr("mass");
-    Node* particulate = pushn(G, initnode(G, tsimulacrum, 0, 1));
-    particulate->name = newstr("particulate");
-    addvar(particulate, newstr("origin"), particle);
-
-    addnewvar(G, newstr("hello?"), texec, 0, 0)->w = (word) printtest;
-    char* str = "       foo:# foo:fee 7 hello? !! ! arr (arr (arr) arr)"
-    " \"hello\" arr:arr2 arr:arr2:arr3 arr:arr2:arr3:[1 2 3 4]123"
-    " arr:arr2:arr3:[hello?] !";
+    addnewvar(G, newstr("hello?"), texec, 0)->w = (word) printtest;
     pushn(G, newstr(str));
-    addnewvar(G, newstr("arr"), tarray, 0, 1);
-    addnewvar(getvch(G, "arr"), newstr("arr2"), tarray, 0, 1);
-    addnewvar(getvch(getvch(G, "arr"), "arr2"), newstr("arr3"), tarray, 0, 1);
+    addnewvar(G, newstr("arr"), tarray, 1);
+    addnewvar(srch(G, "arr"), newstr("arr2"), tarray, 1);
+    addnewvar(srch(srch(G, "arr"), "arr2"), newstr("arr3"), tarray, 1);
     addvar(G, newstr("foo"), newstr("bar"));
+    addtype(srch(G, "foo"), tarray);
     addvar(fromtop(G->d, 0), newstr("fee"), newstr("ber"));
-    Node* P = initnode(0, tpath, 0, 1);
+    Node* P = initnode(0, tpath, 1);
     P->name = newstr("P");
     pushn(P, G);
     parse(P);
     printnodeln(G);
+    // printnodeln(T);
 
-    char c;
-    char buff[0x40];
-    int i = 0;
+    // char c = 0;
+    // char buff[0x40];
+    // int i = 0;
 
-    puts("\n<- ");
-    i = 0;
-    while (1) {
-        while (c != '\r') {
-            while (!(c = getchar()));
-            buff[i++] = putchar(c);
-        }
-        if (c) {
-            puts("\n-> ");
-            puts(buff);
-            puts("\n<- ");
-        }
-        c = getchar();
-    }
+    // puts("\n<- ");
+    // while (1) {
+    //     i = 0;
+    //     while (c != '\r') {
+    //         while (!(c = getchar()));
+    //         buff[i++] = putchar(c);
+    //     }
+    //     if (c) {
+    //         puts("\n-> ");
+    //         puts(buff);
+    //         puts("\n<- ");
+    //     }
+    //     c = getchar();
+    // }
 }
-int main() {mainc();}
+int main() {
+#ifdef runrv64
+    char* str = "       foo:# foo:fee 7 hello? !! ! arr (arr (arr) arr)"
+        " \"hello\" arr:arr2 arr:arr2:arr3 arr:arr2:arr3:[1 2 3 4]123"
+        " arr:arr2:arr3:[hello?] ! arr:arr2:arr3 !! !";
+#else
+    #include <stdio.h>
+    FILE* fp = fopen("challenge", "r");
+    fseek(fp, 0, SEEK_END);
+    int i = ftell(fp);
+    rewind(fp);
+    char str[i];
+    i = 0;
+    while (!feof(fp)) {str[i] = fgetc(fp); i++;}
+    fclose(fp);
+#endif
+    mainc(str);
+}
