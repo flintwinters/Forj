@@ -362,6 +362,7 @@ exittimerhandler:
 .align 11
 mstack:
 .quad mstack # the starting sp
+
 # (threadstore data structure:
 # - one i64 storing pid of last inst
 # - max pid
@@ -439,8 +440,8 @@ putchar:
 .align 11
 user1stack:
 userthread1:
-	call mainc
-userthread1loop:
+	# call mainc
+# userthread1loop:
 	la t1, uservalue1
 	ld t0, 0(t1)
 	addi t0, t0, 1
@@ -448,9 +449,17 @@ userthread1loop:
 	j userthread1
 
 userthread2:
+	la t1, uservalue2
+	ld t0, 0(t1)
+	addi t0, t0, 1
+	sd t0, 0(t1)
 	j userthread2
 
 userthread3:
+	la t1, uservalue3
+	ld t0, 0(t1)
+	addi t0, t0, 1
+	sd t0, 0(t1)
 	j userthread3
 
 uservalue1:

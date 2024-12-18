@@ -10,7 +10,7 @@ struct Block {
 extern void initheap() {
     struct Block* frees = FREES;
     frees->n = frees-1;
-    frees->n->size = 0x8000;
+    frees->n->size = 0x10000;
     frees->size = 0;
     frees->n->n = 0;
 }

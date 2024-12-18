@@ -46,8 +46,8 @@ def main():
 
         if not failed:
             print("\033[92;1mfj all pass "+"─"*30+"\033[0m")
-        system("rm challenge")
-        system("rm challengeresult")
+        # system("rm challenge")
+        # system("rm challengeresult")
     return ret
 
 exit(main())

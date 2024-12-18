@@ -28,7 +28,7 @@ SECTIONS
     PROVIDE(_text_end = .);
   } >ram AT>ram :text
 
-   PROVIDE(_global_pointer = .);
+  PROVIDE(_global_pointer = .);
 
   .rodata : {
     PROVIDE(_rodata_start = .);
@@ -49,11 +49,13 @@ SECTIONS
     PROVIDE(_bss_end = .);
   } >ram AT>ram :bss
 
+  .ccode 0x8000a420 : {
+    KEEP(*(.ccode));
+  }
 
   PROVIDE(_memory_start = ORIGIN(ram));
   PROVIDE(_memory_end = ORIGIN(ram) + LENGTH(ram));
-  PROVIDE(_heap_end = _memory_end - 4096);
-  PROVIDE(_heap_counter = _heap_end + 8);
+  PROVIDE(_heap_top = _memory_end - 4096);
+  PROVIDE(_heap_counter = _heap_top + 8);
   PROVIDE(_uart_base_addr = 0x10000000);
-
 }

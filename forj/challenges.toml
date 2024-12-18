@@ -204,6 +204,7 @@ result = "3"
 
 [addclosure]
 challenge = """
+  debug!
   "n" declare! literal! pull!
   n 5 =! pull!
   1 2 n:+!
