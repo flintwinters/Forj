@@ -43,6 +43,7 @@ struct Error {
 
 Atom* Global;
 Atom* Threads;
+Atom* Library;
 
 Word  asW(Atom* a) {return (a && a->f == words) ? a->d.w : 0;}
 Func  asF(Atom* a) {return (a && a->f == funcs) ? a->d.f : 0;}
@@ -257,10 +258,6 @@ Atom* duplicate(Atom* a) {
     return b;
 }
 
-// Duplicates a onto d
-Atom* duplicateonto(Atom* d, Atom* a) {
-    return push(d, duplicate(a));
-}
 // gets size of the stack inside a
 int length(Atom* a) {
     a = asA(a);
@@ -355,6 +352,12 @@ Atom* printstr(Atom* s) {
     puts(asV(s)->v);
     fflush(stdout);
     return s;
+}
+Atom* concat(Atom* a, Atom* b) {
+    nset(tail(asA(b)), asA(a));
+    tset(a, asA(b));
+    del(b);
+    return a;
 }
 void concatvect(Atom* v1, Atom* v2, int len) {
     v1->d.v = rawpushv(asV(v1), asV(v2)->v, len);
@@ -470,7 +473,10 @@ Atom* atomstr(Atom* a, int indent, char* spinecolor, bool next) {
         }
         else if (cur->f == funcs) {
             s2 = str(FUNCCOLOR);
-            addstr(s2, ref(reversescan(cur->n, cur)));
+            Atom* rev = reversescan(cur->n, cur);
+            if (!rev) {rev = reversescan(Library, cur);}
+            if (rev) {addstr(s2, ref(rev));}
+            else {addstrch(s2, "func");}
         }
 
         if (s2) {push(lines, s2);}
@@ -904,9 +910,9 @@ Error detachfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
 }
 
 Error choosefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
-    Atom* w = get(asA(d), 2);
-    wordfail(w);
-    if (asW(w)) {swap(d);}
+    Error w = pulld(d, r);
+    if (w.msg) {return w;}
+    if (!w.d.w) {swap(d);}
     pullr(d, r);
     return passA(d);
 }
@@ -1296,18 +1302,59 @@ Error mapfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     return passA(d);
 }
 
-Error newtokench(char* c) {
-    Atom* d = pushnew(Global, links, (data) 0ll);
-    Atom* s = ref(str(c));
-    Error er = tokens(d, 0, 0, s);
-    del(s);
-    return er;
+void ziphelper(Atom* d, Atom* a, Atom* b, Word an, Word bn) {
+    if (an < bn) {ziphelper(d, a, b->n, an, bn-1); return;}
+    if (an > bn) {ziphelper(d, a->n, b, an-1, bn); return;}
+    if (!isend(a) && !isend(b)) {ziphelper(d, a->n, b->n, an, bn);}
+    push(d, duplicate(b));
+    push(d, duplicate(a));
 }
+
+Error zipfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Atom* a = new(atoms);
+    Atom* c = pulla(d);
+    Atom* b = pulla(d);
+    ziphelper(a, asA(c), asA(b), length(c), length(b));
+    push(d, a);
+    del(c);
+    del(b);
+    return passA(d);
+}
+
 Error tokench(Atom* d, char* c) {
     Atom* s = ref(str(c));
     Error er = tokens(d, 0, 0, s);
     del(s);
     return er;
+}
+
+Atom* newglobal() {
+    Atom* g = ref(new(atoms));
+    push(g, str(":"));
+    push(g, duplicate(Library));
+    return g;
+}
+
+Atom* newtokench(char* c) {
+    Atom* g = newglobal();
+    Atom* d = pushnew(g, atoms, (data) 0ll);
+    tokench(d, c);
+    Atom* a = pulla(g);
+    nset(a, 0);
+    del(g);
+    return a;
+}
+
+Atom* envch(Atom* a, char* c) {
+    Atom* g = newglobal();
+    push(g, str("env"));
+    push(g, ref(a));
+    del(a);
+    Atom* d = pushnew(g, atoms, (data) 0ll);
+    tokench(d, c);
+    a = pulla(d);
+    del(g);
+    return a;
 }
 
 #define assert(cond) \
@@ -1316,7 +1363,7 @@ Error tokench(Atom* d, char* c) {
         exit(1); \
     } 
 
-#define addfvar(c, f) addvar(lib, c, func(f))
+#define addfvar(c, f) addvar(Library, c, func(f))
 int main(int argc, char** argv) {
     char* fname = "challenge";
     if (argc > 1) {fname = argv[1];}
@@ -1333,7 +1380,7 @@ int main(int argc, char** argv) {
     Global = ref(new(atoms));
     Threads = ref(new(atoms));
     push(Global, str(":"));
-    Atom* lib = pushnew(Global, atoms, (data) 0ll);
+    Library = pushnew(Global, atoms, (data) 0ll);
     addfvar("print",        printfunc);
     addfvar("printnode",    printnodefunc);
     addfvar("input",        fgetfunc);
@@ -1352,6 +1399,7 @@ int main(int argc, char** argv) {
     addfvar("loadatom",     loadatomfunc);
     addfvar("assert",       assertfunc);
     addfvar("undo",         undofunc);
+    addfvar("zip",          zipfunc);
     addfvar("@",            newatomfunc);
     addfvar("#",            shapecomparefunc);
     addfvar("?",            choosefunc);
@@ -1367,13 +1415,31 @@ int main(int argc, char** argv) {
     addfvar("~>",           linkenter);
     addfvar("<-",           absorbfunc);
     addfvar("->",           throwfunc);
-    Atom* d = pushnew(Global, links, (data) 0ll);
-    Error er = tokench(d, program);
-    if (er.msg) {
-        fprintf(stderr, RED "%s\n" RESET, er.msg); \
-        del(er.d.a);
-    }
-    else {println(asA(d));}
+    // Atom* d = pushnew(Global, links, (data) 0ll);
+    // Error er = tokench(d, program);
+    // if (er.msg) {
+    //     fprintf(stderr, RED "%s\n" RESET, er.msg);
+    //     del(er.d.a);
+    // }
+    // else {println(asA(d));}
+    // Atom* d = newtokench("1 2 3 4 + ; env ");
+    // println(d);
+    // del(d);
+    Atom* env = newtokench(":hello 1");
+    concat(env, newtokench(":hi 2"));
+    Atom* d = envch(env, "env :hello . 4 5 6 7 8 env . env :hi .");
+    println(d);
+    del(d);
+
+    d = envch(env, "2 1 env :hello. ?.");
+    println(d);
+    del(d);
+
+    d = envch(env, "1 2 3 ?.");
+    println(d);
+    del(d);
+
+    del(env);
     del(Global);
     del(Threads);
     return 0;
