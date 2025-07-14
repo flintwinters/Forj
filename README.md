@@ -2,9 +2,11 @@
 
 ## Overview
 
-I would like to collaborate on this project with others.  Join the discord here [https://discord.gg/9dVuQs6wYg](https://discord.gg/9dVuQs6wYg).
-
 Forj is a programming language designed for expressive metaprogramming and low-level control.
+
+Some sort of graphics like Raylib or SDL will be exposed from C to Forj eventually, for making games and GUI.
+
+I would like to collaborate on this project with others.  Join the discord here [https://discord.gg/9dVuQs6wYg](https://discord.gg/9dVuQs6wYg).
 
 It is most similar to [Joy](https://github.com/Wodan58/Joy) and Lisp.
 
