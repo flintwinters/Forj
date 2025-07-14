@@ -21,3 +21,19 @@ The stack based structure will be leveraged to achieve efficient reversible debu
 ## AI code generation
 
 Forj's metaprogrammatic typechecking will facilitate adversarial training of LLMs for Forj, by pitting two competing models against each other (One which writes code, and another which writes typechecking code to assert that the first model is correct).
+
+## Code examples
+
+### Assert int list
+```scala
+:allints @. [. int map.. and reduce.. .. ].
+@. [. 1 2 3 :str ]. allints.
+@. [. 1 2 3 1 ]. allints.
+```
+Checks whether an object is entirely of type int.
+```scala
+1
+@ 1 2 3 1
+0
+@ 1 2 3 str
+```
