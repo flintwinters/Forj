@@ -37,3 +37,14 @@ Checks whether an object is entirely of type int.
 0
 @ 1 2 3 str
 ```
+
+### TODO
+
+- put together a simple cli repl ide system. <- can vibe code this skeleton easily
+  - write it in C then expose the ncurses behavior so it can be ported to forj simply.
+- move the testing utility over to forj itself.
+- some decisions about syntax still need to be made (all sort of inter-related)
+  - need some more control over variable scan behavior
+  - `:varname :.` behavior is a bit odd but will likely stay.
+  - find some room in the symbolspace for a different comment style other than ().  I would like to be able to use () in other places.
+  - maybe splitting `:varname` and `"varname"` into two different types of strings
