@@ -1,11 +1,10 @@
 breakpoints = [
     "printnodefunc",
-    "undofunc",
     # "549",
     # "loadprog",
 ]
 displays = [
-    # "println(p)",
+    "printa(d)",
     # "println(r->t)",
     # "println(r->t)"
 ]
