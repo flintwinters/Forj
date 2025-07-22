@@ -728,7 +728,7 @@ Error arraydot(Atom* D, Atom* d, Atom* a, Atom* e, Atom* r) {
     if (!isend(a)) {er = arraydot(D, d, a->n, e, r);}
     d = traverselinks(D);
     if (debugging) {
-        printa(D);
+        // printa(D);
     }
     if (er.msg) {return er;}
     if (a->f == dots) {return dot(D, d, e, r);}
@@ -787,22 +787,32 @@ bool token(Atom* D, Atom* d, Atom* e, Atom* r, Atom* s, Error* er) {
             d = traverselinks(D);
         }
         del(ref(a));
-        // int i = strindexofnot(s, ".");
-        // discardn(s, i);
     }
     else if (v->v[0] == ':') {
-        Atom* a = splitonchars(s, whitespace ".");
+        Atom* a = splitonchars(s, whitespace);
+        v = asV(a);
+        v->len = chlen(v->v)+1;
+        bool isref = v->v[v->len-2] == '.';
+        if (isref) {v->v[--v->len-1] = 0;}
         if (equstr(asV(a)->v, ":")) {
             push(d, func(scanfunc));
+            if (!isref) {dot(D, d, e, r);}
         }
         else {push(d, str(asV(a)->v+1));}
+        if (isref) {push(d, new(dots));}
         del(ref(a));
     }
     else {
-        Atom* a = splitonchars(s, whitespace "\"(.");
+        Atom* a = splitonchars(s, whitespace "\"(");
         Atom* w = strtonum(a);
         if (w) {del(ref(a)); push(d, w); return true;}
+        v = asV(a);
+        v->len = chlen(v->v)+1;
+        bool isref = v->v[v->len-2] == '.';
+        if (isref) {v->v[--v->len-1] = 0;}
         matchandpushvar(d, a);
+        if (isref) {push(d, new(dots));}
+        else {dot(D, d, e, r);}
         del(ref(a));
     }
     return true;
