@@ -112,6 +112,13 @@ result = """
 1 3
 """
 
+[innerfunc3]
+challenge = "@. [. \"Hello Forj!\" print.. @. [. 2 3 ]. ]."
+result = """
+@
+├@ 2 3
+╰Hello Forj! print ."""
+
 [innerfunc2]
 challenge = """1 3 @. [. 6 @. [. 1 2 3 1 ,. ]. ]."""
 result = """
@@ -617,6 +624,89 @@ result = "@ 1 2 3 4 5 6"
 challenge = "@. [. 1 3 5 7 ]. @. [. 2 4 6 8 10 ]. zip."
 result = "@ 1 2 3 4 5 6 7 8"
 
+[mapfunc]
+challenge = "@. [. 4 5 6 ]. @. [. 1 +.. ]. map. "
+result = """
+@ 5 6 7
+@ 4 5 6
+"""
+
+[mapfunc1]
+challenge = "@. [. :a :b :c ]. @. [. 2 ;.. print.. ]. map. "
+result = """
+abc
+@ a b c
+@ a b c
+"""
+
+[inttype]
+challenge = "1 int. 0 int. @. int. @ int."
+result = "1 1 0 1 @ 0 @ 0"
+
+[reduce]
+challenge = "@. [. 1 2 3 ]. @. [. +.. ]. reduce."
+result = "@ 6"
+
+[intreduce]
+challenge = """
+:allints @. [. int map.. and reduce.. .. ].
+@. [. 1 2 3 :a ]. allints.
+@. [. 1 2 3 1 ]. allints.
+"""
+result = """
+1
+@ 1 2 3 1
+0
+@ 1 2 3 a
+@ int map . and reduce . .
+allints
+"""
+
+# [intreducearray]
+# challenge = """
+# :allints @. [.
+#     (assumes an argument called arr)
+#     @.. [.. :arr :..
+#         (gets the length of arr and
+#         subtracts 3 to check equality
+#         because I didn't bother to
+#         add comparisons yet)
+#         [.. length.. ].. ->.. 3 -.. not..
+#     ]..
+#     ->..
+#     (converting the comparison to bool)
+# ].
+# :arr @. [. 1 2 3 ]. allints.
+# :arr @. [. 1 2 3 :a ]. allints.
+# :arr @. [. 1 2 3 4 5 6 ]. allints.
+# """
+# result = """
+# 0
+# @ 1 2 3 4 5 6
+# 0 arr
+# @ 1 2 3 a
+# 0 arr
+# @ 1 2 3
+# arr
+# @ arr : . [ . length . ] . -> . 3 - . arr : . [ . 1 , . ] . 2 , . not .
+# allints
+# """
+
+[duplicator]
+challenge = """
+1 2 @. <~. ->.
+(:func
+@. [.
+    @.. <~.. <~.. ..
+    @.. <~.. <~.. ..
+].
+1 2 3 4 func.
+"""
+result = """
+2
+@ 1 2
+1 2"""
+
 [tailrecursive]
 challenge = """
 :sub1 @. [. .. 1 -.. ]. 
@@ -626,6 +716,39 @@ result = """
 5 2
 @ . 1 - .
 sub1
+"""
+
+[choice]
+challenge = "1 2 3 ?."
+result = "1 3"
+
+[choice1]
+challenge = "0 2 3 ?."
+result = "0 2"
+
+[while]
+challenge = """
+:five @. [. @. [. 5 ]. ].
+
+:]> @. [. ].. ->.. ].
+
+@. [. five [.. [.. 1 -.. ]>.. ]>.. ]. 0 while.
+"""
+result = """
+0 0 0 0 0
+@
+├.
+├@ ] . -> .
+├.
+├@ ] . -> .
+├[ . [ . 1 - .
+╰@
+ ╰@ 0
+@ ] . -> .
+]>
+@
+╰@ 0
+five
 """
 
 [factorial]

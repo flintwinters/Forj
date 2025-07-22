@@ -304,6 +304,7 @@ int chlen(char* c) {
     while (*c++) {n++;}
     return n;
 }
+
 Atom* newvect(int len) {
     int maxlen = (len > 0) ? len : 1;
     Atom* a = new(vects);
@@ -509,6 +510,7 @@ void printa(Atom* a) {
     reclaim(s, sizeof(struct Atom));
     puts("\n");
 }
+
 void println(Atom* a) {
     Atom* s = atomstr(a, 0, (a == Threads) ? RED : YELLOW, true);
     printstr(s);
@@ -725,6 +727,9 @@ Error arraydot(Atom* D, Atom* d, Atom* a, Atom* e, Atom* r) {
     if (a->f == ends) {return er;}
     if (!isend(a)) {er = arraydot(D, d, a->n, e, r);}
     d = traverselinks(D);
+    if (debugging) {
+        printa(D);
+    }
     if (er.msg) {return er;}
     if (a->f == dots) {return dot(D, d, e, r);}
     push(d, duplicate(a));
@@ -752,20 +757,38 @@ Error dot(Atom* D, Atom* d, Atom* e, Atom* r) {
 }
 Atom* func(Func f);
 
+bool matchandpushvar(Atom* d, Atom* a) {
+    Atom* var;
+    if (!asA(d)) {var = scan(d, 0, asV(a)->v);}
+    else {var = scan(asA(d), 0, asV(a)->v);}
+    if (var) {push(d, duplicate(var));}
+    else {
+        Error er = fail(asV(addstrch(str(asV(a)->v), " not found."))->v);
+        return false;
+    }
+    return true;
+}
 bool token(Atom* D, Atom* d, Atom* e, Atom* r, Atom* s, Error* er) {
     if (discardwhitespace(s)) {return false;}
     Vect* v = asV(s);
     if (v->v[0] == '"') {push(d, charptostr(s, '"', '"'));}
     else if (v->v[0] == '(') {del(ref(charptostr(s, '(', ')')));}
     else if (v->v[0] == '.') {
-        if (v->v[1] != '.') {
+        Atom* a = splitonchars(s, whitespace);
+        char* ch = asV(a)->v;
+        if (ch[1] == '.') {push(d, new(dots));}
+        else if (ch[1] != 0) {
+            discardn(a, 1);
+            matchandpushvar(d, a);
+        }
+        else {
             *er = dot(D, d, e, r);
             if (er->msg) {return false;}
             d = traverselinks(D);
         }
-        else {push(d, new(dots));}
-        int i = strindexofnot(s, ".");
-        discardn(s, i);
+        del(ref(a));
+        // int i = strindexofnot(s, ".");
+        // discardn(s, i);
     }
     else if (v->v[0] == ':') {
         Atom* a = splitonchars(s, whitespace ".");
@@ -779,14 +802,7 @@ bool token(Atom* D, Atom* d, Atom* e, Atom* r, Atom* s, Error* er) {
         Atom* a = splitonchars(s, whitespace "\"(.");
         Atom* w = strtonum(a);
         if (w) {del(ref(a)); push(d, w); return true;}
-        Atom* var;
-        if (!asA(d)) {var = scan(d, 0, asV(a)->v);}
-        else {var = scan(asA(d), 0, asV(a)->v);}
-        if (var) {push(d, duplicate(var));}
-        else {
-            *er = fail(asV(addstrch(str(asV(a)->v), " not found."))->v);
-            return false;
-        }
+        matchandpushvar(d, a);
         del(ref(a));
     }
     return true;
@@ -861,6 +877,13 @@ mathfuncbuild(add, +);
 mathfuncbuild(sub, -);
 mathfuncbuild(mul, *);
 mathfuncbuild(div, +);
+mathfuncbuild(and, &&);
+
+Error notfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Word w = pulld(d, r).d.w;
+    pushw(d, !w);
+    return passA(d);
+}
 
 Error undofunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     r = asA(asA(d));
@@ -910,9 +933,9 @@ Error detachfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
 }
 
 Error choosefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
-    Error w = pulld(d, r);
-    if (w.msg) {return w;}
-    if (!w.d.w) {swap(d);}
+    Atom* w = get(asA(d), 2);
+    wordfail(w);
+    if (asW(w)) {swap(d);}
     pullr(d, r);
     return passA(d);
 }
@@ -971,8 +994,11 @@ Error closelink(Atom* D, Atom* d, Atom* e, Atom* r) {
 
 Error linkstep(Atom* D, Atom* d, Atom* e, Atom* r) {
     if (isempty(d)) {return fail("d is empty");}
+    // Word w = pulld(d, r).d.w;
     Atom* l = asA(d);
     if (!isA(l)) {return fail("target is not pointable");}
+    // if (asA(l)) {tset(l, get(asA(l), w));}
+    // else {tset(l, get(l, w));}
     if (asA(l)) {tset(l, asA(l)->n);}
     else {tset(l, l->n);}
     return passA(d);
@@ -1025,6 +1051,11 @@ Error parsefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
 
 Error printnodefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     println(asA(d));
+    return passA(d);
+}
+
+Error debugfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    debugging = !debugging;
     return passA(d);
 }
 
@@ -1283,6 +1314,37 @@ Error runonbranch(Atom* a, Atom* f) {
     del(d);
     return passA(a);
 }
+
+Error whilefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Atom* a = get(asA(d), 0);
+    Atom* b = get(asA(d), 1);
+    Error er = runonbranch(asA(d), b);
+    if (er.msg) {return er;}
+    while (asW(er.d.a)) {
+        push(d, duplicate(a));
+        dot(d, d, 0, 0);
+        er = runonbranch(asA(d), b);
+    }
+    return passA(d);
+}
+
+Error isintfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Atom* a = asA(d);
+    pushw(d, a->f == words);
+    return passA(d);
+}
+
+// needs to be changed to not destroy b
+Error reducefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Atom* a = pulla(d);
+    Atom* b = asA(d);
+    while (!isend(asA(b))) {
+        push(b, a);
+        dot(b, b, 0, 0);
+    }
+    return passA(d);
+}
+
 Error maphelper(Atom* result, Atom* a, Atom* f) {
     if (!isend(a)) {maphelper(result, a->n, f);}
     Error er = runonbranch(a, f);
@@ -1293,12 +1355,11 @@ Error maphelper(Atom* result, Atom* a, Atom* f) {
 }
 Error mapfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     Atom* a = pulla(d);
-    Atom* f = a;
     Atom* cur = asA(asA(d));
     Atom* result = pushnew(d, atoms, (data) 0ll);
-    Error er = maphelper(result, cur, f);
+    Error er = maphelper(result, cur, a);
     if (er.msg) {return er;}
-    del(f);
+    del(a);
     return passA(d);
 }
 
@@ -1383,6 +1444,7 @@ int main(int argc, char** argv) {
     Library = pushnew(Global, atoms, (data) 0ll);
     addfvar("print",        printfunc);
     addfvar("printnode",    printnodefunc);
+    addfvar("debug",        debugfunc);
     addfvar("input",        fgetfunc);
     addfvar("parse",        parsefunc);
     addfvar("store",        storetextfunc);
@@ -1400,6 +1462,11 @@ int main(int argc, char** argv) {
     addfvar("assert",       assertfunc);
     addfvar("undo",         undofunc);
     addfvar("zip",          zipfunc);
+    addfvar("while",        whilefunc);
+    addfvar("int",          isintfunc);
+    addfvar("reduce",       reducefunc);
+    addfvar("and",          andfunc);
+    addfvar("not",          notfunc);
     addfvar("@",            newatomfunc);
     addfvar("#",            shapecomparefunc);
     addfvar("?",            choosefunc);
@@ -1415,31 +1482,17 @@ int main(int argc, char** argv) {
     addfvar("~>",           linkenter);
     addfvar("<-",           absorbfunc);
     addfvar("->",           throwfunc);
-    // Atom* d = pushnew(Global, links, (data) 0ll);
-    // Error er = tokench(d, program);
-    // if (er.msg) {
-    //     fprintf(stderr, RED "%s\n" RESET, er.msg);
-    //     del(er.d.a);
-    // }
-    // else {println(asA(d));}
+    Atom* d = pushnew(Global, links, (data) 0ll);
+    Error er = tokench(d, program);
+    if (er.msg) {
+        fprintf(stderr, RED "%s\n" RESET, er.msg);
+        del(er.d.a);
+    }
+    else {println(asA(d));}
     // Atom* d = newtokench("1 2 3 4 + ; env ");
     // println(d);
     // del(d);
-    Atom* env = newtokench(":hello 1");
-    concat(env, newtokench(":hi 2"));
-    Atom* d = envch(env, "env :hello . 4 5 6 7 8 env . env :hi .");
-    println(d);
-    del(d);
-
-    d = envch(env, "2 1 env :hello. ?.");
-    println(d);
-    del(d);
-
-    d = envch(env, "1 2 3 ?.");
-    println(d);
-    del(d);
-
-    del(env);
+    // del(env);
     del(Global);
     del(Threads);
     return 0;
