@@ -26,9 +26,9 @@ Forj's metaprogrammatic typechecking will facilitate adversarial training of LLM
 
 ### Assert int list
 ```scala
-:allints @. [. int map.. and reduce.. .. ].
-@. [. 1 2 3 :str ]. allints.
-@. [. 1 2 3 1 ]. allints.
+:allints @ [ .int map. and reduce. .. ]
+@ [ 1 2 3 "str" ] allints
+@ [ 1 2 3 1 ] allints
 ```
 Checks whether an object is entirely of type int.
 ```scala
