@@ -481,7 +481,7 @@ Atom* atomstr(Atom* a, int indent, char* spinecolor, bool next) {
         }
 
         if (s2) {push(lines, s2);}
-        else {return str(RED "None");}
+        else {del(lines); del(ref(s1)); return ref(str(RED "None"));}
         addstrch(s1, RESET);
         if (isend(cur) || !next) {break;}
         cur = cur->n;
@@ -743,10 +743,14 @@ Error dot(Atom* D, Atom* d, Atom* e, Atom* r) {
     Func f = asF(a);
     if (f) {newr(d, r); pullr(d, r); return f(D, d, e, r);}
     if (isA(a)) {
-        if (isempty(a)) {newr(d, r); pullr(d, r); return passA(d);}
+        if (isempty(a)) {
+            newr(d, r);
+            pullr(d, r);
+            return passA(d);
+        }
         Atom* temp = pulla(d);
         a = asA(a);
-        Error er;
+        Error er = passA(d);
         if (e) {growthreadexec(e, a);}
         else {er = arraydot(D, d, a, e, r);}
         del(temp);
@@ -1331,10 +1335,13 @@ Error whilefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     Error er = runonbranch(asA(d), b);
     if (er.msg) {return er;}
     while (asW(er.d.a)) {
+        del(er.d.a);
         push(d, duplicate(a));
         dot(d, d, 0, 0);
         er = runonbranch(asA(d), b);
     }
+    del(er.d.a);
+    // del(a);
     return passA(d);
 }
 
@@ -1350,8 +1357,10 @@ Error reducefunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     Atom* b = asA(d);
     while (!isend(asA(b))) {
         push(b, a);
-        dot(b, b, 0, 0);
+        Error er = dot(b, b, 0, 0);
+        if (er.msg) {return er;}
     }
+    del(a);
     return passA(d);
 }
 
@@ -1499,10 +1508,6 @@ int main(int argc, char** argv) {
         del(er.d.a);
     }
     else {println(asA(d));}
-    // Atom* d = newtokench("1 2 3 4 + ; env ");
-    // println(d);
-    // del(d);
-    // del(env);
     del(Global);
     del(Threads);
     return 0;
