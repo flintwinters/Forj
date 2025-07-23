@@ -14,6 +14,14 @@ result = "c"
 challenge = "0 ."
 result = "0"
 
+[add] 
+challenge = "2 3 +"
+result = "5"
+
+[atom] 
+challenge = "@"
+result = "@"
+
 [execnull] 
 challenge = "@ ."
 result = "None"
@@ -21,6 +29,10 @@ result = "None"
 [execfive]
 challenge = "5 ."
 result = "5"
+
+[fivestring]
+challenge = ":five 5"
+result = "five 5"
 
 [namefive]
 challenge = ":five 5 five"
@@ -422,13 +434,13 @@ result = """
 """
 
 [interior1]
-challenge = """1 2 3 @ [ 4 :b @ [ :c 5 ] ] :b :c ."""
+challenge = """1 2 3 @ [ 4 :b @ [ :c 5 ] ] ::b ::c ."""
 result = """
 1 2 3 5
 """
 
 [interior2]
-challenge = """1 2 3 @ [ 4 :b @ [ 5 :c @ [ :d 6 ] ] ] :b :c :d ."""
+challenge = """1 2 3 @ [ 4 :b @ [ 5 :c @ [ :d 6 ] ] ] ::b ::c ::d ."""
 result = """
 1 2 3 6
 """
@@ -441,24 +453,25 @@ result = """
 """
 
 [interiorcolon2]
-challenge = """1 2 3 @ [ :a 9 ] :a ."""
+challenge = """1 2 3 @ [ :a 9 ] ::a ."""
 result = """
 1 2 3 9
 """
 
-[interiorcolon3]
-challenge = """1 2 3 :: @ [ :a 9 ] """
-result = """
-@ a 9
-1 2 3 :
-"""
-
 [interiorcolon4]
-challenge = """1 2 3 :: @ [ :a 9 ] a"""
+challenge = """1 2 3 ::: @ [ :a 9 ] a"""
 result = """
 9
 @ a 9
-1 2 3 :
+1 2 3 ::
+"""
+
+[interiorcolon3]
+challenge = """1 2 3 ::: @ [ :a 9 ] :a . """
+result = """
+9
+@ a 9
+1 2 3 ::
 """
 
 [scanner]
@@ -756,7 +769,7 @@ challenge = """
     2 ;.
     1 -.
     @ [ 1 +. ]
-    @ [ :fact :. ]
+    @ [ :fact. ]
     .? .. 4 ;
     *.
     :"  @ [ "!" ] 2 ,.

@@ -24,6 +24,8 @@ enum form {
     words, // literal number value
     funcs, // pointer to a c function
     vects, // pointer to a dynamic array (a string)
+    label, // shallow label
+    deeplabel, // internal label
     dots,  // indicates this is a `..` object, signaling execution
     ends   // structural only.  Placeholder type pointed to by empty `atoms`
 };
@@ -47,8 +49,9 @@ Atom* Library;
 
 Word  asW(Atom* a) {return (a && a->f == words) ? a->d.w : 0;}
 Func  asF(Atom* a) {return (a && a->f == funcs) ? a->d.f : 0;}
-Vect* asV(Atom* a) {return (a && a->f == vects) ? a->d.v : 0;}
 bool  isA(Atom* a) {return (a->f == atoms || a->f == links || a->f == execs);}
+bool  isV(Atom* a) {return (a->f == vects || a->f == label || a->f == deeplabel);}
+Vect* asV(Atom* a) {return (a && isV(a)) ? a->d.v : 0;}
 Atom* asA(Atom* a) {return (a && isA(a)) ? a->d.a : 0;}
 
 Error pass(data d)    {return (Error) {d, 0};}
@@ -78,7 +81,11 @@ Error makeErr(char* msg, Word line) {
 
 #define wordfail(a) xfail(a, words)
 #define funcfail(a) xfail(a, funcs)
-#define vectfail(a) xfail(a, vects)
+#define vectfail(a)  \
+    if (!isV(a)) { \
+        fprintf(stderr, RED "\e[4mError: %s\n" RESET, fail(#a " is not a string, label, or deeplabel").msg); \
+        abort(); \
+    }
 #define atomfail(a)  \
     if (!isA(a)) { \
         fprintf(stderr, RED "\e[4mError: %s\n" RESET, fail(#a " is not an atom or link").msg); \
@@ -339,6 +346,8 @@ Atom* setstr(Atom* s, char* c, int len) {
 }
 Atom* newstrlen(char* c, int len) {return setstr(newvect(len), c, len);}
 Atom* str(char* c) {return newstrlen(c, chlen(c));}
+Atom* newlabel(char* c) {Atom* l = str(c); l->f = label; return l;}
+Atom* newdeeplabel(char* c) {Atom* l = str(c); l->f = deeplabel; return l;}
 Atom* dupstr(Atom* s) {return str(asV(s)->v);}
 Atom* substr(Atom* s, int a, int b) {
     Vect* v = s->d.v;
@@ -464,7 +473,7 @@ Atom* atomstr(Atom* a, int indent, char* spinecolor, bool next) {
             }
         }
         else if (cur->f == dots) {s2 = str(DOTSCOLOR ".");}
-        else if (cur->f == vects) {
+        else if (isV(cur)) {
             s2 = str(VECTCOLOR);
             addstrch(s2, cur->d.v->v);
         }
@@ -540,6 +549,26 @@ bool isstrempty(Atom* s) {return asV(s)->len == 0 || asV(s)->v[0] == 0;}
 bool discardn(Atom* s, int n) {
     setstr(s, s->d.v->v+n, s->d.v->len-n);
     return isstrempty(s);
+}
+bool startswith(Atom* s, char* ch) {
+    char* sch = asV(s)->v;
+    while (*ch) {
+        if (*sch != *ch) {return false;}
+        sch++; ch++;
+    }
+    return true;
+}
+
+bool endswith(Atom* s, char* ch) {
+    char* sch = asV(s)->v;
+    int l = asV(s)->len;
+    int i = chlen(ch);
+    if (i > l) {return false;}
+    l -= i+1;
+    while (i--) {
+        if (sch[l+i] != ch[i]) {return false;}
+    }
+    return true;
 }
 // shrinks s1 to length i and returns s2 as the part that was removed
 Atom* splitat(Atom* s1, int i) {
@@ -635,12 +664,14 @@ Atom* matchvar(Atom* a, char* c) {
     }
     return 0;
 }
+Error varrecscanfunc(Atom* D, Atom* d, Atom* e, Atom* r);
 Atom* reversescan(Atom* a, Atom* w) {
     Atom* prev = 0;
     if (w->d.f == scanfunc) {return str(":");}
+    if (w->d.f == varrecscanfunc) {return str("::");}
     while (a) {
         if (prev && w->d.w == prev->d.w && asV(a)) {break;}
-        if (asV(a) && equstr(asV(a)->v, ":")) {
+        if (asV(a) && equstr(asV(a)->v, "::")) {
             prev = reversescan(prev->d.a, w);
             if (prev) {return prev;}
         }
@@ -657,7 +688,7 @@ Atom* scan(Atom* a, Atom* end, char* c) {
     while (a && a != end) {
         v = matchvar(a, c);
         if (v) {return v;}
-        v = matchvar(a, ":");
+        v = matchvar(a, "::");
         if (v) {
             v = scan(asA(v), a, c);
             if (v) {return v;}
@@ -717,7 +748,7 @@ bool run(Atom* D, Atom* d, Atom* e, Atom* r) {
     Atom* ea = pulla(e);
     Atom* eaa = asA(ea);
     if (eaa->f == dots) {dot(D, d, e, r);}
-    else if (eaa->f == vects) {push(d, dupstr(eaa));}
+    else if (isV(eaa)) {push(d, dupstr(eaa));}
     else {push(d, duplicate(eaa));}
     del(ea);
     return true;
@@ -739,7 +770,8 @@ Error dot(Atom* D, Atom* d, Atom* e, Atom* r) {
     atomfail(D);
     d = traverselinks(D);
     Atom* a = asA(d);
-    if (asV(a)) {return varrecscanfunc(D, d, e, r);}
+    if (a->f == label) {return scanfunc(D, d, e, r);}
+    if (a->f == deeplabel) {return varrecscanfunc(D, d, e, r);}
     Func f = asF(a);
     if (f) {newr(d, r); pullr(d, r); return f(D, d, e, r);}
     if (isA(a)) {
@@ -759,7 +791,12 @@ Error dot(Atom* D, Atom* d, Atom* e, Atom* r) {
     else if (a->f == dots) {newr(d, r); pullr(d, r); return dot(D, d, e, r);}
     return passA(d);
 }
-Atom* func(Func f);
+
+Atom* func(Func f) {
+    Atom* a = new(funcs);
+    a->d.f = f;
+    return a;
+}
 
 bool matchandpushvar(Atom* d, Atom* a) {
     Atom* var;
@@ -775,50 +812,44 @@ bool matchandpushvar(Atom* d, Atom* a) {
 bool token(Atom* D, Atom* d, Atom* e, Atom* r, Atom* s, Error* er) {
     if (discardwhitespace(s)) {return false;}
     Vect* v = asV(s);
-    if (v->v[0] == '"') {push(d, charptostr(s, '"', '"'));}
-    else if (v->v[0] == '(') {del(ref(charptostr(s, '(', ')')));}
-    else if (v->v[0] == '.') {
-        Atom* a = splitonchars(s, whitespace);
-        char* ch = asV(a)->v;
-        if (ch[1] == '.') {push(d, new(dots));}
-        else if (ch[1] != 0) {
-            discardn(a, 1);
-            matchandpushvar(d, a);
-        }
-        else {
-            *er = dot(D, d, e, r);
-            if (er->msg) {return false;}
-            d = traverselinks(D);
-        }
-        del(ref(a));
-    }
-    else if (v->v[0] == ':') {
-        Atom* a = splitonchars(s, whitespace);
-        v = asV(a);
-        v->len = chlen(v->v)+1;
-        bool isref = v->v[v->len-2] == '.';
-        if (isref) {v->v[--v->len-1] = 0;}
-        if (equstr(asV(a)->v, ":")) {
-            push(d, func(scanfunc));
-            if (!isref) {dot(D, d, e, r);}
-        }
-        else {push(d, str(asV(a)->v+1));}
-        if (isref) {push(d, new(dots));}
-        del(ref(a));
-    }
+    if (v->v[0] == '"') {push(d, charptostr(s, '"', '"')); return true;}
+    else if (v->v[0] == '(') {del(ref(charptostr(s, '(', ')'))); return true;}
+    Atom* a = splitonchars(s, whitespace);
+    v = asV(a);
+    v->len = chlen(v->v)+1;
+    Atom* var = 0;
+    bool isauto = false;
+    bool execnow = false;
+    if (equstr(v->v, "..")) {var = new(dots);}
+    else if (equstr(v->v, ".")) {execnow = true;}
     else {
-        Atom* a = splitonchars(s, whitespace "\"(");
-        Atom* w = strtonum(a);
-        if (w) {del(ref(a)); push(d, w); return true;}
-        v = asV(a);
-        v->len = chlen(v->v)+1;
-        bool isref = v->v[v->len-2] == '.';
-        if (isref) {v->v[--v->len-1] = 0;}
-        matchandpushvar(d, a);
-        if (isref) {push(d, new(dots));}
-        else {dot(D, d, e, r);}
-        del(ref(a));
-    }
+        isauto = endswith(a, ".");
+        execnow = !startswith(a, ".");
+        if (isauto) {v->v[--v->len-1] = 0;}
+        if (!execnow) {discardn(a, 1); v = asV(a);}
+        if (equstr(v->v, ":")) {var = func(scanfunc);}
+        else if (equstr(v->v, "::"))  {var = func(varrecscanfunc);}
+        else if (equstr(v->v, ":::")) {var = newlabel("::"); execnow = false;}
+        else if (startswith(a, "::")) {var = newdeeplabel(v->v+2); execnow = false;}
+        else if (startswith(a, ":"))  {var = newlabel(v->v+1); execnow = false;}
+        else {
+            var = strtonum(a);
+            if (!var) {
+                var = asA(d);
+                var = scan(var ? var : d, 0, asV(a)->v);
+                if (!var) {
+                    Error er = fail(asV(addstrch(str(asV(a)->v), " not found."))->v);
+                    return false;
+                }
+                else {var = duplicate(var);}
+            }
+        }
+    }   
+
+    if (var) {push(d, var);}
+    if (isauto) {push(d, new(dots));}
+    else if (execnow) {dot(D, d, e, r);} 
+    del(a);
     return true;
 }
 
@@ -859,12 +890,6 @@ Error tokens(Atom* D, Atom* e, Atom* r, Atom* s) {
 void addvar(Atom* d, char* k, Atom* v) {
     push(d, str(k));
     push(d, v);
-}
-
-Atom* func(Func f) {
-    Atom* a = new(funcs);
-    a->d.f = f;
-    return a;
 }
 
 void mathfunc(Word* x, Word* y, Atom* d, Atom* r) {
@@ -1222,7 +1247,7 @@ Error loadatomfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
         a->r = 0;
         pushnew(newatoms, words, (data) a);
         mapset(mapidpts, id, a);
-        if (a->f == vects) {
+        if (isV(a)) {
             Vect vcpy;
             fread(&vcpy, sizeof(Vect), 1, FP);
             Vect* v = valloclen(vcpy.len);
@@ -1410,7 +1435,7 @@ Error tokench(Atom* d, char* c) {
 
 Atom* newglobal() {
     Atom* g = ref(new(atoms));
-    push(g, str(":"));
+    push(g, str("::"));
     push(g, duplicate(Library));
     return g;
 }
@@ -1459,7 +1484,7 @@ int main(int argc, char** argv) {
 
     Global = ref(new(atoms));
     Threads = ref(new(atoms));
-    push(Global, str(":"));
+    push(Global, str("::"));
     Library = pushnew(Global, atoms, (data) 0ll);
     addfvar("print",        printfunc);
     addfvar("printnode",    printnodefunc);
