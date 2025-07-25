@@ -1397,6 +1397,7 @@ Error maphelper(Atom* result, Atom* a, Atom* f) {
     del(er.d.a);
     return passA(result);
 }
+
 Error mapfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     Atom* a = pulla(d);
     Atom* cur = asA(asA(d));
@@ -1423,6 +1424,13 @@ Error zipfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
     push(d, a);
     del(c);
     del(b);
+    return passA(d);
+}
+
+Error hasfunc(Atom* D, Atom* d, Atom* e, Atom* r) {
+    Atom* s = pulla(d);
+    pushw(d, scantail(asA(asA(d)), asV(s)->v) != 0);
+    del(s);
     return passA(d);
 }
 
@@ -1511,6 +1519,7 @@ int main(int argc, char** argv) {
     addfvar("reduce",       reducefunc);
     addfvar("and",          andfunc);
     addfvar("not",          notfunc);
+    addfvar("has",          hasfunc);
     addfvar("@",            newatomfunc);
     addfvar("#",            shapecomparefunc);
     addfvar("?",            choosefunc);
