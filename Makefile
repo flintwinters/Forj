@@ -1,7 +1,7 @@
 all:
 	@python3 challenger.py ${CHALL} --no-gdb --fail-fast --no-cleanup
 fj: forj.c vect.c
-	@gcc forj.c -g -o fj
+	@gcc forj.c -g -o fj  -Werror -D_DEFAULT_SOURCE -D_DEFAULT_SOURCE -I. -I/home/iron/projects/forj/raylib/src -I/home/iron/projects/forj/raylib/src/external  -I/usr/local/include -I/home/iron/projects/forj/raylib/src/external/glfw/include -L. -L/home/iron/projects/forj/raylib/src -L/home/iron/projects/forj/raylib/src -L/usr/local/lib -lraylib -lGL -lm -lpthread -ldl -lrt -latomic -DPLATFORM_DESKTOP -DPLATFORM_DESKTOP_GLFW
 int: forj.c vect.c
 	@gcc forj.c -DINTERACTIVE -o fj && fj
 allval: fj

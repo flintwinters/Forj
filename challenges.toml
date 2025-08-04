@@ -58,6 +58,14 @@ result = "1"
 challenge = "1 2 1 .,"
 result = "1 2 1 ," 
 
+[multidot]
+challenge = """
+2 4 .+ ...
+2 4 .+ ... .
+2 4 .+ ... . .
+"""
+result = "2 4 + .1 2 4 + . 6"
+
 [pull2]
 challenge = "1 2 1 ,."
 result = "1 2 1 , ."
@@ -274,6 +282,15 @@ result = """
 1 3
 """
 
+[descend_throw_pull]
+challenge = """
+1 :b 3 :c 4 :a @ <~ <~ -> .a <~ <~ ::b ."""
+result = """
+4 3
+@ 1 b 3 c 4
+1 b 3 c 4 a
+"""
+
 [descend3]
 challenge = """1 3 @ <~ @ [ @ [ 2 ] ]"""
 result = """
@@ -487,6 +504,19 @@ result = """
 2 2 2 2 4
 """
 
+[bubble]
+challenge = """
+:bubbler @ [ 1 2 3 length bubble. ]
+@ [ 4 5 6 ] bubbler
+"""
+result = """
+@ 4 5 6
+1 2 3
+@ 4 5 6
+@ 1 2 3 3 bubble .
+bubbler
+"""
+
 [removal]
 challenge = """0 2 3 @ [ 1 1 , ] :hello 5 4 @ [ 1 2 1 , hello ] """
 result = """
@@ -582,6 +612,47 @@ challenge = """
 .r .d .e run
 
 .r undo 1 ,
+
+7 ,
+"""
+result = """
+@
+╰@ 2 3 +
+d
+@ 2 3 + .
+p
+"""
+
+[mathundofunc2]
+challenge = """
+:p @ [ 2 3 +. 4 5 *. ]
+:d @ [ @ ]
+:r @ [ @ ]
+:e @ .p growexec
+.r .d .e run
+
+.r undo .d [ 1 , ]
+.r undo
+.r .d .e run
+7 , 
+"""
+result = """
+@
+╰@ 2 3 +
+d
+@ 2 3 + .
+p
+"""
+
+[mathundofunc3]
+challenge = """
+:p @ [ 2 3 +. 4 *. ]
+:d @ [ @ ]
+:r @ [ @ ]
+:e @ .p growexec
+.r .d .e run
+
+.r undo 1 , 
 
 7 ,
 """
@@ -945,773 +1016,216 @@ d
 p
 """
 
-# [factorialdetach]
-# challenge = """
-# :fact @ [ @ ]
+[atomcreator]
+challenge = """
+:new@ @ [ @. [. 1 2 3 ]. ]
+@ [ new@ ]
+@ [ new@ ]
+[ [ + new@ ] ] 
+"""
+result = """
+@
+╰@
+ ├@ 1 2 3
+ ╰1 5
+@
+╰@ 1 2 3
+@ @ . [ . 1 2 3 ] .
+new@
+"""
 
-# fact [ [
-#     2 ;..
-#     1 -..
+[atomopener]
+challenge = """
+:open@ @ [ @. [. ]
+:close@ @ [ ]. ]
+open@ 1 2 3 close@
+open@ 1 2 5 close@
+"""
+result = """
+@ 1 2 5
+@ 1 2 3
+@ ] .
+close@
+@ @ . [ .
+open@
+"""
 
-#     @ [ 1 +. ]
-#     @ [ :fact :.. .. .. ]
-#     ? ..
-#     *..
-#     :" @ [ "!" ] 2 ,.
-# ] ] 1 , .
+[curlybrackets1]
+challenge = """
+:{ @ [ ::: @. [. :" @ [ :{ ] 2 ,. ]
+:} @ [ ]. 2 ., ... :" @ [ :} ] 2 ,. ]
+:container @ [ { :six 6 } 2 3 :" @ [ "container" ] 2 ,. ]
+.container ::six .
+container
+"""
+result = """
+6 2 3
+container
+container
+}
+}
+{
+{
+"""
 
-# :d @ [ @ ]
-# :e @ [ @ @ [ 5 fact.. .. ] growexec ]
-# d e. detach
-# @ [ .. 1 2 3 4 5 6 7 8 9 0 ] 100 ;. .
-# 1000 ,
-# """
-# result = """
-# @
-# ╰@ 78
-# @
-# ╰@
-#  ├@ 5
-#  ├@
-#   ├@
-#    ╰!
-#   ╰5
-#  ├@
-#   ├.
-#   ├@
-#    ╰!
-#   ╰5
-#  ╰@
-#   ├. .
-#   ├@
-#    ╰!
-#   ╰5
-# e
-# @
-# ╰@ 78
-# d
-# @
-# ╰!
-# fact
-# """
+[curlybrackets2]
+challenge = """
+:{ @ [ ::: @. [. :" @ [ :{ ] 2 ,. ]
+:} @ [ ]. 2 ., ... :" @ [ :} ] 2 ,. ]
+:container @ [
+    { :six 6 }
+    2 3
+    { :seven 7 }
+    :" @ [ "container" ] 2 ,.
+    { :eight 8
+        { :nine 9 }
+        { 1 :twelve 12 3
+            { :thirteen 13 }
+            :ten 10 
+            { :eleven 11 }
+        } 
+    }
+    5
+]
+.container ::six .
+.container ::seven .
+.container ::eight .
+.container ::nine .
+.container ::ten .
+.container ::eleven .
+.container ::twelve .
+.container ::thirteen .
+container
+"""
+result = """
+6 7 8 9 a b c d 2 3 5
+container
+container
+}
+}
+{
+{
+"""
 
-# [typer]
-# challenge = """
-# 0 1 2 #
-# @ [ 1 2 3 ] 4 [ 5 6 7 ] #
-# @ [ 1 2 [ 8 ] 3 ] 4 [ 5 6 [ 9 ] 7 ] #
-# @ [ 1 [ 8 ] 2 3 ] 4 [ 5 6 [ 9 ] 7 ] #
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 0
-#     ┣ 1
-#     ┣ 1
-#     ┣ 1
-#     ┗ 0 e
-# """
+[curlyauxfunctions]
+challenge = """
+:{ @ [ ::: @. [. :" @ [ :{ ] 2 ,. ]
+:} @ [ ]. 2 ., ... :" @ [ :} ] 2 ,. ]
+:vehicle @ [
+    :base @. [.
+        :wheels :wheels. 1 +.
+    ].
+]
+:car @ [
+    { :wheels 4 }
+    vehicle
+]
 
-# [enterer]
-# challenge = """
-# 3 4 [ 1 [ 5 6 ] 2 ] 0 <~
-# 8 9 [ 1@ [ 11 12 ] 13 ] 0 <~ ~>.
-# 0 <~ ~>. <~ ~>.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 📁 
-#       ┣ c x2
-#       ┗ b e
-#     ┣ 📁 
-#       ┣ d x2
-#       ┗ 📁 a e
-#         ┣ c x2
-#         ┗ b e
-#     ┣ 📁 9
-#       ┣ d x2
-#       ┗ 📁 a e
-#         ┣ c x2
-#         ┗ b e
-#     ┣ 8
-#     ┣ 📁 
-#       ┣ 📁 4 x2
-#         ┣ 2
-#         ┗ 📁 1 e
-#           ┣ 6
-#           ┗ 5 e
-#       ┗ 3 e
-#     ┣ 📁 4 x2
-#       ┣ 2
-#       ┗ 📁 1 e
-#         ┣ 6
-#         ┗ 5 e
-#     ┗ 3 e
-# """
+.car ::base ::wheels .
+.car ::wheels .
+"""
+result = """
+5 4
+@
+├@ wheels 5
+├2 wheels . base
+├@ wheels 4
+╰::
+car
+@ base @ . [ . wheels wheels . 1 + . ] .
+vehicle
+}
+}
+{
+{
+"""
 
-# [choice1]
-# challenge = """
-# 3 1 2 ?
-# 0 1 2 ?
-# 0 8 @ [ 2 3 4 ] ?
-# 1 8 @ [ 2 3 4 ] ?
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 📁 
-#       ┣ 4
-#       ┣ 3
-#       ┗ 2 e
-#     ┣ 1
-#     ┣ 8
-#     ┣ 0
-#     ┣ 1
-#     ┣ 0
-#     ┣ 2
-#     ┗ 3 e
-# """
+[curlyauxfunctions2]
+challenge = """
+:{ @ [ ::: @. [. :" @ [ :{ ] 2 ,. ]
+:} @ [ ]. 2 ., ... :" @ [ :} ] 2 ,. ]
+:vehicle @ [
+    @ [ bubble. int. ] ...
+    :base @. [.
+        :wheels :wheels. 1 +.
+    ]. 2 ., ...
+]
+:car @ [
+    { :wheels 4 }
+    0 vehicle
+]
 
-# [internalexec]
-# challenge = """
-# 1 2 3 [ 7 4 5 ; 6 ]
-# 0 <~ ~>. <~ [ . ]
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 📁 
-#       ┣ 4
-#       ┣ 4
-#       ┣ 4
-#       ┣ 4
-#       ┣ 4
-#       ┗ 7 x2 e
-#     ┣ 📁 3
-#       ┣ 6
-#       ┣ ;
-#       ┣ 5
-#       ┣ 4
-#       ┗ 7 x2 e
-#     ┣ 2
-#     ┗ 1 e
-# """
+.car ::base ::wheels .
+.car ::wheels .
+1 2 3 4 9 car
+@ [ 5 ]
+1 2 "str" car
+"""
+result = """
+1 2 str str 0
+@ 5
+5 4 1 2 3 4 9 9 1
+@
+├2 wheels .
+├@ wheels 5
+├. base
+├@ bubble . int .
+├2 wheels . 0
+├@ wheels 4
+╰::
+car
+@
+├.1 base @ . [ . wheels wheels . 1 + . ] . 2 , .1
+╰@ bubble . int .
+vehicle
+}
+}
+{
+{
+"""
 
-# [multiply]
-# challenge = """
-# 5 5 1 -. *. *
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ *
-#     ┗ 14 e
-# """
+[debugger]
+challenge = """
+debug
+"""
+result = "None"
 
-# # [undomultiply]
-# # challenge = """
-# # 0 [
-# #   5 5 4 *..
-# # ] thread. detach
-# # await debug. .
-# # undo. "undid\n" print.
-# # """
-# # result = """
-# # ┗ 1 program:
-# #   ┗ 0 x3 e
-# #     ┣ 4
-# #     ┣ 5
-# #     ┗ 5 e
-# # """
+[factorialdetach]
+challenge = """
+:++ @ [ 1 +. :" @ [ :++ ] 2 ,. ]
+:fact @ [ @ ]
 
-# [factorialrecursive]
-# challenge = """
-# 1 :num
-# 0 [
-#   @ [ "!" print.. ] :\" 2 ,.
-#   2 ;.. 1 -..
-#   @ [ 1 ,. 1 ]
-#   @ [ :factorial :.. .. ] ? ..
-#   *..
-# ]
-# :factorial
-# 4 factorial.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 18
-#     ┣ factorial
-#     ┣ !
-#     ┣ num
-#     ┗ 1 e
-# """
+.fact [ [
+    debug.
+    2 ;.
+    1 -.
 
-# [factorialthread]
-# challenge = """
-# 0 [
-#   0 [
-#     @ [ "!" print.. ] :\" 2 ,.
-#     2 ;.. 1 -..
-#     @ [ 1 ,. 1 ]
-#     @ [ :factorial :.. .. ] ? ..
-#     *..
-#   ] :factorial
-#   4 factorial ..
-# ]
-# thread. detach
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ program:
-#       ┗ 📁  e
-#         ┣ 4
-#         ┣ factorial
-#         ┗ !
-#       ┣ exec:
-#       ┣ !
-#       ┣ .
+    .++
+    @ [ debug :fact :. .. .. ]
+    ?. ..
+    *.
+] ] 1 , .
 
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 18
-#     ┣ factorial
-#     ┗ !
-# """
+:d @ [ @ ]
+:p @ [ 5 fact. ]
+:e @ .p growexec
+0 .d .e detach
+@ [ .. 0 1 2 3 4 5 6 7 8 9 ] 100 ; .
+1000 ,
+"""
 
-# [padder]
-# challenge = """
-# \"123\" 5 pad.
-# @ [ 
-# \"hello hi\" 15 pad.
-# ]
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 📁 
-#       ┗ hello hi        e
-#     ┗ 123   e
-# """
-
-# [strconcatter]
-# challenge = """
-# \"123\"
-# \"hello hi\"
-# concat.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ 123hello hi e
-# """
-
-# [threads]
-# challenge = """
-# 0
-# @ [ 1 "thread 1\n" print.. ] thread.
-# @ [ 2 "thread 2\n" print.. ] thread.
-# @ [ 3 "thread 3\n" print.. ] thread.
-# @ [ 4 64 ;. 63 ,. "thread 4\n" print.. ] thread.
-# detach 1 ,
-# detach 1 ,
-# detach 1 ,
-# detach 1 ,
-# """
-# result = """
-# thread 3
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┗ 3 e
-# thread 2
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┗ 2 e
-# thread 4
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┗ 4 e
-# thread 1
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┗ 1 e
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ 0 e
-# """
-
-# [threads2]
-# challenge = """
-# 0
-# @ [ 4 5 6 "thread 7\n" print.. 10 3 -. <-. ] thread.
-# detach :t
-# 1 2 3 4 5 6 7 8 9
-# t [ <- ]
-# """
-# result = """
-# thread 7
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┣ 6
-#     ┣ 5
-#     ┗ 4 e
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 7
-#     ┣ 1 program:
-#       ┗ 📁  e
-#         ┣ 6
-#         ┣ 5
-#         ┗ 4 e
-#     ┣ 9
-#     ┣ 8
-#     ┣ 7
-#     ┣ 6
-#     ┣ 5
-#     ┣ 4
-#     ┣ 3
-#     ┣ 2
-#     ┣ 1
-#     ┣ t
-#     ┣ 1 program:
-#       ┗ 📁  e
-#         ┣ 6
-#         ┣ 5
-#         ┗ 4 e
-#     ┗ 0 e
-# """
-
-# [threadattributes]
-# challenge = """
-# @ [ 1 2 3 ] thread.
-# detach
-# 4 5 6 3 ,
-# :P.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 3
-#     ┣ 2
-#     ┗ 1 e
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 📁 
-#       ┗ 📁  x2 e
-#         ┣ 3
-#         ┣ 2
-#         ┗ 1 e
-#     ┗ 1 program:
-#       ┗ 📁  x2 e
-#         ┣ 3
-#         ┣ 2
-#         ┗ 1 e
-# """
-
-# [threadconsume]
-# challenge = """
-# 8
-# @ [ 4 5 6 ]
-# thread. [ ->. ]
-# detach 
-# 8
-# @ [ 4 5 6 ->.. ]
-# thread. [ ->. ]
-# detach 
-# 8
-# """
-# result = """
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┣ 6
-#     ┣ 5
-#     ┗ 4 e
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 8
-#     ┣ program:
-#       ┗ 📁  e
-#         ┣ 📁 
-#           ┣ . x2
-#           ┣ func
-#           ┣ ->
-#           ┣ .
-#           ┣ func
-#           ┣ 
-#           ┣ .
-#           ┣ func
-#           ┗  e
-#         ┣ 6
-#         ┣ 5
-#         ┗ 4 e
-#       ┣ exec:
-#       ┣ "
-#       ┣ 2 x2
-#       ┣ func x2
-#       ┣ . x2
-#       ┣ func x2
-#       ┣ . x2
-
-#     ┣ 8
-#     ┣ 1 program:
-#       ┗ 📁  e
-#         ┣ 6
-#         ┣ 5
-#         ┗ 4 e
-#     ┗ 8 e
-# ┣ 1 program:
-#   ┗ 📁  e
-#     ┣ 8
-#     ┣ 6
-#     ┣ 5
-#     ┗ 4 e
-# """
-
-# [stepper1]
-# challenge = """
-# @ [ 1 2 3 4 5 6 7 8 9 ] thread.
-# step.
-# step.
-# step.
-# step.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ program:
-#       ┗ 📁  e
-#         ┣ 4
-#         ┣ 3
-#         ┣ 2
-#         ┗ 1 e
-#       ┣ exec:
-#       ┣ 5 x2
-#       ┣ 6 x2
-#       ┣ 7 x2
-#       ┣ 8 x2
-#       ┣ 9
-# """
-
-# [threadreturn]
-# challenge = """
-# @ [ 1 2 3 <-. ] thread.
-# step. step. step. step. step.
-# step. step. step. step. step.
-# step. step. step. step. step.
-# step.
-# [ <- ]
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 3
-#     ┗ program:
-#       ┗ 📁  e
-#         ┣ 2
-#         ┗ 1 e
-# """
-
-# # [negative]
-# # challenge = """
-# # @ [ 
-# #   @ [ 1 ] :one
-# #   one.. one..
-# #   one.. one..
-# #   one.. one..
-# # ]
-# # thread.
-# # detach
-# # 0 1 -. -.
-# # 1 -.
-# # """
-# # result = """
-# # ┗ 1 program:
-#   # ┗ 0 e
-# #   ┗ 1 program:
-#   # ┗ 0 e
-# #     ┣ 4
-# #     ┣ 3
-# #     ┣ 2
-# #     ┗ 1 e
-# # """
-
-# [multihi]
-# challenge = """
-# @ [ .. "hi!\n" print .. ] 7 ;. .
-# """
-# result = """
-# hi!
-# hi!
-# hi!
-# hi!
-# hi!
-# hi!
-# hi!
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ 0 e
-# """
-
-# [execnext]
-# challenge = """
-# 0 [
-#   @ [ \"library\" print.. ] :\"
-#   @ [ .. 1 2 -.. ] :one
-#   @ [ one 3 ;. .. ] :many
-# ]
-# :many . :many
-# 2 3 many many.
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ 3
-#     ┣ 2
-#     ┣ many
-#     ┣ 📁 
-#       ┣ . x2
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#       ┗ 📁  e
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#     ┗ library
-# """
-
-# [grabinternal]
-# challenge = """
-# 0 [
-#   @ [ 
-#     @ [ \"library\" print.. ] :\" breakpoint.
-#     @ [ .. 1 2 -.. ] :one
-#     @ [ one 3 ;. .. ] :many
-#   ]
-# ]
-# :P . [ <- ]
-# :many . :many
-# 1 2 3 
-# 2 3 
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 3
-#     ┣ 2
-#     ┣ 3
-#     ┣ 2
-#     ┣ 1
-#     ┣ many
-#     ┣ 📁 
-#       ┣ . x2
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#       ┗ 📁  e
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e
-#     ┣ library
-#     ┗ 0 e
-# """
-
-# [finishfirst]
-# challenge = """
-# 0 [
-#   @ [ \"library\" print.. ] :\"
-#   @ [ .. 1 2 -.. ] :one
-#   @ [ one 3 ;. .. ] :many
-#   @ [ .. 0 1 2 3 4 5 6 7 8 9 ] 2 ;. .
-# ] thread.
-# detach
-# 2 3
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 3
-#     ┣ 2
-#     ┗ program:
-#       ┗ library
-#       ┣ exec:
-#       ┣ 4 x2
-#       ┣ 5 x2
-#       ┣ 6 x2
-#       ┣ 7 x2
-#       ┣ 8 x2
-#       ┣ 9 x2
-#       ┣ 0 x2
-#       ┣ 1 x2
-#       ┣ 2 x2
-#       ┣ 3 x2
-#       ┣ 4 x2
-#       ┣ 5 x2
-#       ┣ 6 x2
-#       ┣ 7 x2
-#       ┣ 8 x2
-#       ┣ 9
-
-# ┗ 1 program:
-#   ┗ library
-# """
-
-# [finishafter]
-# challenge = """
-# 0 [
-#   @ [ \"library\" print.. ] :\"
-#   @ [ .. 1 2 -.. ] :one
-#   @ [ one 3 ;. .. ] :many
-# ] thread.
-# detach
-# :P . [ <- ]
-# :many . :many
-# many .
-# 2 3 
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ library
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 3
-#     ┣ 2
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ ffffffff
-#     ┣ 📁 
-#       ┣ . x2
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e0
-#       ┣ 📁 
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e0
-#       ┗ 📁  e0
-#         ┣ . x4
-#         ┣ -
-#         ┣ 2
-#         ┣ 1
-#         ┗ . e0
-#     ┣ library
-#     ┣ 📁 
-#     ┗ 1 program:
-#       ┗ library
-# """
-
-# [exiter]
-# challenge = """
-# @ [ 1 2 3 4 5 6 exit.. 8 9 10 ] thread. detach
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ program:
-#       ┗ 📁  e
-#         ┣ 3
-#         ┣ 2
-#         ┗ 1 e
-#       ┣ exec:
-#       ┣ 4 x2
-#       ┣ 5 x2
-#       ┣ 6 x2
-#       ┣ exit
-#       ┣ . x2
-#       ┣ 8 x2
-#       ┣ 9 x2
-#       ┣ a
-
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┣ 6
-#     ┣ 5
-#     ┣ 4
-#     ┣ 3
-#     ┣ 2
-#     ┗ 1 e
-# """
-
-# [fileread]
-# challenge = """
-# "challenge" read. print.
-# """
-# result = """
-# "challenge" read. print.
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗  e
-# """
-
-# [filewrite]
-# challenge = """
-# "hello?\n" "challenge" write.
-# "challenge" read. print.
-# """
-# result = """
-# hello?
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗  e
-# """
-
-# [atomholder]
-# challenge = """
-# [] [ 1 2 ]
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ 📁  e
-#       ┣ 2
-#       ┗ 1 e
-# """
-
-# [stepper3]
-# challenge = """
-# @ [ 2 3 +. ] thread.
-# 0 ,. @ [ .. step .. breakpoint.. ] 12 ;.
-# breakpoint. .
-# """
-# result = """
-# ┗ 1 program:
-#   ┗ 📁  e
-#     ┗ program:
-#       ┗ 📁  e
-#         ┗ 5 e
-# """
+[window]
+challenge = """
+800 400 window
+@ [ shouldclosewin. not. ]
+@ [ drawbegin[.
+    clearbg.
+    "testerino" writetext.
+    ]drawend.
+]
+while
+"""
+result = """
+@ drawbegin[ . clearbg . testerino writetext . ]drawend .
+@ shouldclosewin . not .
+"""

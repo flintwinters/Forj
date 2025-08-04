@@ -1,10 +1,2 @@
-breakpoints = [
-    "printnodefunc",
-    # "549",
-    # "loadprog",
-]
-displays = [
-    "printa(d)",
-    # "println(r->t)",
-    # "println(r->t)"
-]
+breakpoints = [ "printnodefunc", "1269",]
+displays = []
